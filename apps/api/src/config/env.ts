@@ -11,6 +11,7 @@ const schema = z.object({
   REDIS_URL: z.string().url(),
   JWT_ISSUER: z.string().url(),
   JWT_AUDIENCE: z.string().min(1),
+  DEV_JWT_SECRET: z.string().default('dev-only-secret-change-me'),
   COGNITO_REGION: z.string().default('us-east-1'),
   COGNITO_USER_POOL_ID: z.string().min(1),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),

@@ -37,3 +37,13 @@ SELECT t.id, code, name, contact, email, phone, 'GHS', terms FROM t, (VALUES
   ('SUP-0001','Tamale Shea Cooperative','Ama Mensah', 'ama@tamaleshea.coop', '+233244000111', 30),
   ('SUP-0002','West African Packaging', 'Kwaku Owusu','info@wa-pack.com',    '+233302000555', 45)
 ) AS v(code, name, contact, email, phone, terms);
+
+-- Demo admin user (dev-only; password is 'dev-password' via AuthService.devLogin)
+WITH t AS (SELECT id FROM tenants WHERE slug='naturalshea'),
+     u AS (
+       INSERT INTO users (tenant_id, email, full_name)
+       SELECT t.id, 'admin@naturalshea.care', 'Demo Admin' FROM t
+       RETURNING id
+     )
+INSERT INTO user_roles (user_id, role_id)
+SELECT u.id, r.id FROM u, roles r WHERE r.code = 'admin';
