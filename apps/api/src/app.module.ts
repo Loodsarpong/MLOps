@@ -8,6 +8,7 @@ import { UsersModule } from './modules/users/users.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { ProductsModule } from './modules/products/products.module';
+import { WarehousesModule } from './modules/warehouses/warehouses.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { ProcurementModule } from './modules/procurement/procurement.module';
 import { SalesModule } from './modules/sales/sales.module';
@@ -33,6 +34,7 @@ import { HealthController } from './health.controller';
     CustomersModule,
     SuppliersModule,
     ProductsModule,
+    WarehousesModule,
     InventoryModule,
     ProcurementModule,
     SalesModule,

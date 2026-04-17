@@ -10,7 +10,7 @@ export const PosSaleItemSchema = z.object({
 });
 
 export const PosSaleSchema = z.object({
-  session_id: z.string().uuid(),
+  session_id: z.string().uuid().optional(),
   warehouse_id: z.string().uuid(),
   customer_id: z.string().uuid().optional(),
   currency: z.string().length(3).default('GHS'),
