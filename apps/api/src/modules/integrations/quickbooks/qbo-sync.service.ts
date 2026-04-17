@@ -51,7 +51,7 @@ export class QboSyncService {
       })),
     };
 
-    const r = await this.call(realmId, token, 'invoice', 'POST', body);
+    const r = await this.call(realmId, token, 'invoice', 'POST', body) as any;
     const qboId = r.Invoice?.Id ?? r.Id;
     await this.db
       .updateTable('invoices')
@@ -82,7 +82,7 @@ export class QboSyncService {
       DisplayName: c.name,
       PrimaryEmailAddr: c.email ? { Address: c.email } : undefined,
       PrimaryPhone: c.phone ? { FreeFormNumber: c.phone } : undefined,
-    });
+    }) as any;
     const id = r.Customer?.Id ?? r.Id;
     await this.db
       .updateTable('customers')

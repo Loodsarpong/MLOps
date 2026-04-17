@@ -52,7 +52,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
       .selectAll()
       .where('tenant_id', '=', t.tenantId)
       .where('key', '=', key)
-      .where('expires_at', '>', sql<Date>`now()`)
+      .where('expires_at', '>', sql<any>`now()`)
       .executeTakeFirst();
     if (row && row.request_hash !== hash) {
       throw new Error('Idempotency key reused with different payload');
