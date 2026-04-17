@@ -42,7 +42,7 @@ SELECT t.id, code, name, contact, email, phone, 'GHS', terms FROM t, (VALUES
 WITH t AS (SELECT id FROM tenants WHERE slug='naturalshea'),
      u AS (
        INSERT INTO users (tenant_id, email, full_name)
-       SELECT t.id, 'admin@naturalshea.care', 'Demo Admin' FROM t
+       SELECT t.id, 'lsarpong@naturalsheacare.com', 'L Sarpong' FROM t
        RETURNING id
      )
 INSERT INTO user_roles (user_id, role_id)
