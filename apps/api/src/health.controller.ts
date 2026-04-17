@@ -1,5 +1,5 @@
 import { Controller, Get, Inject } from '@nestjs/common';
-import { HealthCheck, HealthCheckService, HttpHealthIndicator } from '@nestjs/terminus';
+import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
 import { Kysely, sql } from 'kysely';
 import { Database } from './db/schema';
 import { KYSELY } from './db/db.module';
@@ -8,7 +8,6 @@ import { KYSELY } from './db/db.module';
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
-    private readonly http: HttpHealthIndicator,
     @Inject(KYSELY) private readonly db: Kysely<Database>,
   ) {}
 
