@@ -1,0 +1,11 @@
+environment          = "prod"
+region               = "us-east-1"
+vpc_cidr             = "10.44.0.0/16"
+az_count             = 3
+db_instance_class    = "db.t4g.large"
+db_allocated_storage = 100
+api_desired_count    = 3
+api_image            = "123456789012.dkr.ecr.us-east-1.amazonaws.com/ns-api:prod"
+web_bucket_name      = "ns-prod-web"
+domain_name          = "naturalshea.care"
+alarm_email          = "ops@naturalshea.care"

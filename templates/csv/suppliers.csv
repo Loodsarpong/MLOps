@@ -1,0 +1,4 @@
+code,name,contact_name,email,phone,address_line1,city,region,country,payment_terms_days,currency
+SUP-0001,Tamale Shea Cooperative,Ama Mensah,ama@tamaleshea.coop,+233244000111,Plot 12 Industrial Rd,Tamale,Northern,GH,30,GHS
+SUP-0002,West African Packaging,Kwaku Owusu,info@wa-pack.com,+233302000555,22 Harbour Rd,Tema,Greater Accra,GH,45,GHS
+SUP-0003,GlobalLogistics GH,Esi Arkoh,ops@gl-gh.com,+233244777888,Freight Hub,Accra,Greater Accra,GH,15,USD

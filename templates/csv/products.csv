@@ -1,0 +1,6 @@
+sku,upc,name,description,category,uom,is_raw_material,is_tracked_by_batch,tax_rate_pct,cost_price,base_price,currency,weight_grams
+SKU-SHEA-BB-200,0840000012345,Raw Shea Body Butter 200g,Unrefined shea butter whipped to a light texture,body-care,unit,false,true,5.00,18.50,35.00,GHS,200
+SKU-SHEA-BB-500,0840000012352,Raw Shea Body Butter 500g,Family-size body butter,body-care,unit,false,true,5.00,40.00,78.00,GHS,500
+SKU-SHEA-SOAP,0840000012369,African Black Soap Bar,Traditional West African black soap,body-care,unit,false,true,5.00,8.00,18.00,GHS,120
+SKU-SHEA-HAIR,0840000012376,Shea Hair Butter 150ml,Deep-conditioning hair butter,hair-care,unit,false,true,5.00,22.00,42.00,GHS,150
+SKU-RAW-SHEA-KG,0840000012390,Unrefined Shea Butter (raw),Bulk raw shea butter sold per kilogram,raw-material,kg,true,true,0.00,45.00,80.00,GHS,1000

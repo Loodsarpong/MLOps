@@ -1,0 +1,74 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [staging, prod]
+        default: staging
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'staging' }}
+    env:
+      AWS_REGION: us-east-1
+      ECR_REPO_API: ns-api
+      ECS_CLUSTER: ns-${{ inputs.environment || 'staging' }}
+      ECS_SERVICE_API: ns-${{ inputs.environment || 'staging' }}-api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsDeploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+
+      - name: Build & push API image
+        run: |
+          IMG=${{ steps.ecr.outputs.registry }}/$ECR_REPO_API:${{ github.sha }}
+          docker build -f infra/docker/api.Dockerfile -t $IMG .
+          docker push $IMG
+          echo "IMG=$IMG" >> "$GITHUB_ENV"
+
+      - name: Run DB migrations (one-shot task)
+        run: |
+          aws ecs run-task \
+            --cluster "$ECS_CLUSTER" \
+            --task-definition "$ECS_SERVICE_API-migrate" \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ secrets.PRIVATE_SUBNETS }}],securityGroups=[${{ secrets.TASK_SG }}]}"
+
+      - name: Deploy API
+        run: |
+          aws ecs update-service --cluster "$ECS_CLUSTER" --service "$ECS_SERVICE_API" --force-new-deployment
+
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @ns/web build
+
+      - name: Sync web to S3 + invalidate CDN
+        run: |
+          aws s3 sync apps/web/.next/static s3://$WEB_BUCKET/_next/static --delete
+          aws s3 sync apps/web/public s3://$WEB_BUCKET --delete
+          aws cloudfront create-invalidation --distribution-id $CDN_ID --paths "/*"
+        env:
+          WEB_BUCKET: ${{ secrets.WEB_BUCKET }}
+          CDN_ID: ${{ secrets.CDN_DISTRIBUTION_ID }}
+
+      - name: Smoke test
+        run: curl -fsS https://api.${{ inputs.environment == 'prod' && 'naturalshea.care' || 'staging.naturalshea.care' }}/v1/health

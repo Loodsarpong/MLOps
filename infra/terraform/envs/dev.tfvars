@@ -1,0 +1,11 @@
+environment          = "dev"
+region               = "us-east-1"
+vpc_cidr             = "10.42.0.0/16"
+az_count             = 2
+db_instance_class    = "db.t4g.small"
+db_allocated_storage = 20
+api_desired_count    = 1
+api_image            = "123456789012.dkr.ecr.us-east-1.amazonaws.com/ns-api:latest"
+web_bucket_name      = "ns-dev-web"
+domain_name          = "dev.naturalshea.care"
+alarm_email          = ""

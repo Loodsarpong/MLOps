@@ -1,0 +1,11 @@
+environment          = "staging"
+region               = "us-east-1"
+vpc_cidr             = "10.43.0.0/16"
+az_count             = 2
+db_instance_class    = "db.t4g.medium"
+db_allocated_storage = 50
+api_desired_count    = 2
+api_image            = "123456789012.dkr.ecr.us-east-1.amazonaws.com/ns-api:staging"
+web_bucket_name      = "ns-staging-web"
+domain_name          = "staging.naturalshea.care"
+alarm_email          = "ops@naturalshea.care"

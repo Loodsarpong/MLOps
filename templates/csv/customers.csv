@@ -1,0 +1,4 @@
+code,name,segment,email,phone,billing_line1,billing_city,billing_country,tax_id,credit_limit,currency
+CUST-0001,Beauty Haven Ltd,wholesale,orders@beautyhaven.com,+233501234567,15 Ring Rd,Accra,GH,C0005678901,5000.00,GHS
+CUST-0002,Radiant Skin Stores,distributor,buy@radiantskin.africa,+233244111222,Market St,Kumasi,GH,C0008887765,20000.00,GHS
+CUST-0003,Walk-in Retail,retail,,,,,,0.00,GHS

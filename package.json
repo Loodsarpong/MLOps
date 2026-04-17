@@ -1,0 +1,16 @@
+{
+  "name": "naturalshea-erp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "NaturalShea Care ERP — monorepo",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev:api": "pnpm --filter @ns/api dev",
+    "dev:web": "pnpm --filter @ns/web dev",
+    "migrate": "pnpm --filter @ns/api migrate",
+    "seed": "pnpm --filter @ns/api seed",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint"
+  }
+}
