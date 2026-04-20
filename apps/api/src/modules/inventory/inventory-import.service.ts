@@ -28,7 +28,7 @@ export class InventoryImportService {
     const result: ImportResult = { accepted: 0, rejected: 0, errors: [] };
 
     await this.db.transaction().execute(async (trx) => {
-      await sql`SET LOCAL app.tenant_id = ${t.tenantId}`.execute(trx);
+      await sql`SELECT set_config('app.tenant_id', ${t.tenantId}, true)`.execute(trx);
       let i = 0;
       for (const row of rows) {
         i += 1;

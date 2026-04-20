@@ -26,7 +26,7 @@ export class PosService {
   async recordSale(dto: PosSaleDto) {
     const t = currentTenant();
     return this.db.transaction().execute(async (trx) => {
-      await sql`SET LOCAL app.tenant_id = ${t.tenantId}`.execute(trx);
+      await sql`SELECT set_config('app.tenant_id', ${t.tenantId}, true)`.execute(trx);
 
       const subtotal = dto.items.reduce((acc, i) => acc + i.unit_price * i.quantity, 0);
       const taxTotal = dto.items.reduce(

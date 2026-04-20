@@ -48,7 +48,7 @@ export class InvoicingService {
   async recordPayment(invoiceId: string, body: { amount: number; method: string; reference?: string }) {
     const t = currentTenant();
     return this.db.transaction().execute(async (trx) => {
-      await sql`SET LOCAL app.tenant_id = ${t.tenantId}`.execute(trx);
+      await sql`SELECT set_config('app.tenant_id', ${t.tenantId}, true)`.execute(trx);
       const inv = await trx
         .selectFrom('invoices')
         .selectAll()
