@@ -54,6 +54,8 @@
     "@types/pg": "^8.10.0",
     "@types/pdfkit": "^0.13.0",
     "@types/supertest": "^6.0.2",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.56.0",
     "node-pg-migrate": "^7.0.0",
     "supertest": "^6.3.3",
