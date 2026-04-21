@@ -8,8 +8,8 @@
     "build": "nest build",
     "start": "node dist/main.js",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "vitest run",
-    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts --passWithNoTests",
     "migrate": "node-pg-migrate up -d DATABASE_URL -m ../../db/migrations",
     "migrate:down": "node-pg-migrate down -d DATABASE_URL -m ../../db/migrations",
     "seed": "psql $DATABASE_URL -f ../../db/seeds/01_roles.sql -f ../../db/seeds/02_demo_tenant.sql"
