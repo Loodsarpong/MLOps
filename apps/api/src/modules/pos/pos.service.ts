@@ -209,7 +209,7 @@ export class PosService {
         AND s.warehouse_id = ${warehouseId}
         AND s.quantity > 0
       ORDER BY b.expires_on NULLS LAST, s.updated_at
-      FOR UPDATE
+      FOR UPDATE OF s
     `.execute(trx);
 
     let remaining = needed;
