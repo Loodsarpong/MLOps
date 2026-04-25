@@ -88,6 +88,7 @@ export default function POSPage() {
         toast.success('Sale recorded', { description: `${r.order_no} · ${r.invoice.invoice_no}` });
       } else {
         await enqueueSale({ id: key, payload, createdAt: Date.now() });
+        window.dispatchEvent(new Event('pos-queue-changed'));
         toast.info('Offline — sale queued', { description: 'Will sync when online.' });
       }
       cart.clear();

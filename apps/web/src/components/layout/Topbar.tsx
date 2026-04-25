@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, Wifi, WifiOff, User, LogOut } from 'lucide-react';
+import { Bell, Wifi, WifiOff, User, LogOut, RefreshCw } from 'lucide-react';
 import { useOnline } from '@/lib/useOnline';
+import { useOfflineSync } from '@/lib/useOfflineSync';
 import { signOut } from '@/lib/auth';
 
 export function Topbar() {
   const online = useOnline();
+  const { pending } = useOfflineSync();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const router = useRouter();
@@ -42,7 +44,16 @@ export function Topbar() {
   return (
     <header className="flex h-14 items-center justify-between border-b bg-white px-4">
       <div />
-      <div className="flex items-center gap-4 text-sm">
+      <div className="flex items-center gap-3 text-sm">
+        {pending > 0 && (
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full bg-shea-100 px-2 py-0.5 text-xs text-shea-900"
+            title="Sales queued offline"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            {pending} pending sync
+          </span>
+        )}
         <span
           className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs ${
             online
