@@ -16,6 +16,9 @@ export const PosSaleSchema = z.object({
   currency: z.string().length(3).default('USD'),
   fx_rate: z.number().positive().default(1),
   discount_total: z.number().nonnegative().default(0),
+  // Apply tenant default sales tax to the order subtotal. Default ON;
+  // cashiers can disable per sale (e.g. tax-exempt customer).
+  apply_tax: z.boolean().default(true),
   items: z.array(PosSaleItemSchema).min(1),
   payment: z.object({
     method: z.enum(['cash', 'card', 'mobile_money', 'bank_transfer', 'cheque', 'credit']),

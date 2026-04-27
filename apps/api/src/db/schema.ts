@@ -36,6 +36,7 @@ export interface Database {
   payslips: PayslipTable;
   audit_logs: AuditLogTable;
   notifications: NotificationTable;
+  notification_log: NotificationLogTable;
   idempotency_keys: IdempotencyKeyTable;
   tenant_integrations: TenantIntegrationTable;
   pos_sessions: PosSessionTable;
@@ -44,6 +45,7 @@ export interface Database {
 export interface TenantTable {
   id: Generated<UUID>; name: string; slug: string;
   base_currency: string; timezone: string; plan: string; is_active: boolean;
+  default_tax_rate_pct: Numeric;
   created_at: Generated<TimestampTz>; updated_at: Generated<TimestampTz>;
 }
 
@@ -88,6 +90,7 @@ export interface ProductTable {
 export interface WarehouseTable {
   id: Generated<UUID>; tenant_id: UUID; code: string; name: string;
   type: string; address: unknown; is_active: boolean;
+  clerk_name: string | null; clerk_email: string | null; clerk_phone: string | null;
 }
 
 export interface BatchTable {
@@ -116,6 +119,7 @@ export interface SalesOrderTable {
   status: 'draft'|'confirmed'|'picked'|'shipped'|'delivered'|'cancelled'|'returned';
   currency: string; fx_rate: Numeric;
   subtotal: Numeric; discount_total: Numeric; tax_total: Numeric; total: Numeric;
+  tax_applied: boolean; tax_rate_pct: Numeric | null;
   notes: string | null; created_by: UUID | null;
   created_at: Generated<TimestampTz>; updated_at: Generated<TimestampTz>;
 }
@@ -225,6 +229,15 @@ export interface NotificationTable {
   id: Generated<UUID>; tenant_id: UUID; user_id: UUID | null;
   channel: string; topic: string; payload: unknown;
   read_at: TimestampTz | null; sent_at: TimestampTz | null;
+  created_at: Generated<TimestampTz>;
+}
+
+export interface NotificationLogTable {
+  id: Generated<UUID>; tenant_id: UUID;
+  ref_type: string; ref_id: UUID;
+  recipient: string; from_addr: string | null;
+  channel: string; status: string;
+  error: string | null; message_id: string | null;
   created_at: Generated<TimestampTz>;
 }
 

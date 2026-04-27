@@ -1,12 +1,12 @@
 -- 02_demo_tenant.sql — demo NaturalShea tenant (US ops) with single Brendamour warehouse, products, customers
 
 WITH t AS (
-  INSERT INTO tenants (name, slug, base_currency, timezone)
-  VALUES ('NaturalShea Care', 'naturalshea', 'USD', 'America/New_York')
+  INSERT INTO tenants (name, slug, base_currency, timezone, default_tax_rate_pct)
+  VALUES ('NaturalShea Care', 'naturalshea', 'USD', 'America/New_York', 7.80)
   RETURNING id
 )
-INSERT INTO warehouses (tenant_id, code, name, type, address)
-SELECT t.id, v.code, v.name, v.type, v.address
+INSERT INTO warehouses (tenant_id, code, name, type, address, clerk_name, clerk_email, clerk_phone)
+SELECT t.id, v.code, v.name, v.type, v.address, v.clerk_name, v.clerk_email, v.clerk_phone
 FROM t, (VALUES
   ('WH-BLUEASH', 'Brendamour Blue Ash DC', 'dc',
    jsonb_build_object(
@@ -17,8 +17,9 @@ FROM t, (VALUES
      'postal', '45242',
      'country','US',
      'phone',  '+1-513-247-0077 ext 15'
-   ))
-) AS v(code, name, type, address);
+   ),
+   'Don', 'ba2@brendamour.com', '+1-513-247-0077 ext 15')
+) AS v(code, name, type, address, clerk_name, clerk_email, clerk_phone);
 
 WITH t AS (SELECT id FROM tenants WHERE slug='naturalshea')
 INSERT INTO products (tenant_id, sku, upc, name, category, uom, is_tracked_by_batch, tax_rate_pct, cost_price, base_price)

@@ -18,6 +18,7 @@ export class TenantInterceptor implements NestInterceptor {
         {
           tenantId: u.tenantId,
           userId: u.id,
+          email: u.email,
           roles: u.roles,
           ip: req.ip,
           userAgent: req.headers['user-agent'],

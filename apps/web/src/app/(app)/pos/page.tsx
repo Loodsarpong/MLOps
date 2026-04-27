@@ -74,6 +74,7 @@ export default function POSPage() {
       warehouse_id: warehouseId,
       currency: cart.currency,
       fx_rate: 1,
+      apply_tax: cart.applyTax,
       items: cart.lines.map((l) => ({
         product_id: l.product_id,
         quantity: l.quantity,
@@ -196,9 +197,27 @@ export default function POSPage() {
           ))}
         </ul>
         <div className="border-t pt-3">
-          <div className="flex justify-between text-sm">
-            <span>Total</span>
-            <span className="font-semibold">{cart.formattedTotal}</span>
+          <div className="space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: cart.currency }).format(cart.subtotal)}</span>
+            </div>
+            <label className="flex cursor-pointer items-center justify-between">
+              <span className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={cart.applyTax}
+                  onChange={(e) => cart.setApplyTax(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                Sales tax ({cart.taxRatePct.toFixed(2)}%)
+              </span>
+              <span>{new Intl.NumberFormat('en-US', { style: 'currency', currency: cart.currency }).format(cart.tax)}</span>
+            </label>
+            <div className="flex justify-between border-t pt-1 font-semibold">
+              <span>Total</span>
+              <span>{cart.formattedTotal}</span>
+            </div>
           </div>
           <div className="mt-3 flex gap-2">
             {(['cash', 'card', 'mobile_money'] as const).map((m) => (

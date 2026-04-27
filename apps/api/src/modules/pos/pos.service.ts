@@ -5,6 +5,7 @@ import { Database } from '../../db/schema';
 import { KYSELY } from '../../db/db.module';
 import { currentTenant } from '../../common/tenancy/tenant.context';
 import { AuditService } from '../../common/audit/audit.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import type { PosSaleDto } from './pos.dto';
 
 /**
@@ -21,6 +22,7 @@ export class PosService {
   constructor(
     @Inject(KYSELY) private readonly db: Kysely<Database>,
     private readonly audit: AuditService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async recordSale(dto: PosSaleDto) {
@@ -28,11 +30,16 @@ export class PosService {
     return this.db.transaction().execute(async (trx) => {
       await sql`SELECT set_config('app.tenant_id', ${t.tenantId}, true)`.execute(trx);
 
+      // Look up tenant default tax rate; honor the cashier's apply_tax toggle.
+      const tenant = await trx
+        .selectFrom('tenants')
+        .select(['default_tax_rate_pct'])
+        .where('id', '=', t.tenantId)
+        .executeTakeFirstOrThrow();
+      const taxRatePct = dto.apply_tax ? Number(tenant.default_tax_rate_pct) : 0;
+
       const subtotal = dto.items.reduce((acc, i) => acc + i.unit_price * i.quantity, 0);
-      const taxTotal = dto.items.reduce(
-        (acc, i) => acc + (i.unit_price * i.quantity * i.tax_pct) / 100,
-        0,
-      );
+      const taxTotal = +((subtotal * taxRatePct) / 100).toFixed(2);
       const discountTotal = dto.discount_total;
       const total = +(subtotal + taxTotal - discountTotal).toFixed(2);
 
@@ -55,16 +62,18 @@ export class PosService {
           discount_total: discountTotal.toFixed(2),
           tax_total: taxTotal.toFixed(2),
           total: total.toFixed(2),
+          tax_applied: dto.apply_tax,
+          tax_rate_pct: taxRatePct.toFixed(2),
           created_by: t.userId,
         })
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      // 2. Items + stock allocation (FIFO)
+      // 2. Items + stock allocation (FIFO).
+      // Line totals are pre-tax (discount applied); tax is order-level.
       for (const item of dto.items) {
         const lineTotal = +(
-          item.unit_price * item.quantity * (1 - item.discount_pct / 100) *
-            (1 + item.tax_pct / 100)
+          item.unit_price * item.quantity * (1 - item.discount_pct / 100)
         ).toFixed(2);
 
         await trx
@@ -77,7 +86,7 @@ export class PosService {
             quantity: String(item.quantity),
             unit_price: item.unit_price.toFixed(4),
             discount_pct: item.discount_pct.toFixed(2),
-            tax_pct: item.tax_pct.toFixed(2),
+            tax_pct: taxRatePct.toFixed(2),
             line_total: lineTotal.toFixed(2),
           })
           .execute();
@@ -118,7 +127,7 @@ export class PosService {
             description: `SKU ${item.product_id}`,
             quantity: String(item.quantity),
             unit_price: item.unit_price.toFixed(4),
-            tax_pct: item.tax_pct.toFixed(2),
+            tax_pct: taxRatePct.toFixed(2),
             line_total: (item.unit_price * item.quantity).toFixed(2),
           })
           .execute();
@@ -176,14 +185,99 @@ export class PosService {
 
       await this.audit.log({ action: 'create', entityType: 'pos_sale', entityId: order.id });
 
+      // Snapshot what the post-commit email handler needs.
+      const fulfillment = await this.collectFulfillmentPayload(trx, {
+        orderId: order.id,
+        orderNo: order.order_no,
+        invoiceNo: invoice.invoice_no,
+        warehouseId: dto.warehouse_id,
+        customerId: invoice.customer_id,
+        paymentMethod: dto.payment.method,
+        currency: dto.currency,
+        totals: { subtotal, tax: taxTotal, total },
+      });
+
       // TODO: SQS enqueue invoice.pdf + qbo.sync (stubbed; see workers/)
       return {
-        id: order.id,
-        order_no: order.order_no,
-        invoice: { id: invoice.id, invoice_no: invoice.invoice_no, pdf_url: null },
-        totals: { subtotal, tax_total: taxTotal, discount_total: discountTotal, total },
+        result: {
+          id: order.id,
+          order_no: order.order_no,
+          invoice: { id: invoice.id, invoice_no: invoice.invoice_no, pdf_url: null },
+          totals: { subtotal, tax_total: taxTotal, discount_total: discountTotal, total },
+        },
+        fulfillment,
       };
+    }).then(async ({ result, fulfillment }) => {
+      // Post-commit, fire-and-forget: SES/SQS failure must not roll back the sale.
+      // Idempotency is enforced by notification_log's UNIQUE (ref_type, ref_id).
+      if (fulfillment) {
+        this.notifications
+          .sendOrderFulfillmentEmail(fulfillment)
+          .catch((e) =>
+            this.log.error(`order-fulfillment dispatch failed for ${result.order_no}`, e as Error),
+          );
+      }
+      return result;
     });
+  }
+
+  private async collectFulfillmentPayload(
+    trx: Kysely<Database>,
+    args: {
+      orderId: string;
+      orderNo: string;
+      invoiceNo: string;
+      warehouseId: string;
+      customerId: string;
+      paymentMethod: string;
+      currency: string;
+      totals: { subtotal: number; tax: number; total: number };
+    },
+  ) {
+    const wh = await trx
+      .selectFrom('warehouses')
+      .select(['id', 'code', 'name', 'clerk_name', 'clerk_email', 'address'])
+      .where('id', '=', args.warehouseId)
+      .executeTakeFirst();
+    if (!wh || !wh.clerk_email) return null;
+
+    const customer = await trx
+      .selectFrom('customers')
+      .select(['name'])
+      .where('id', '=', args.customerId)
+      .executeTakeFirst();
+
+    const items = await trx
+      .selectFrom('sales_order_items as soi')
+      .leftJoin('products as p', 'p.id', 'soi.product_id')
+      .select([
+        'p.sku as sku',
+        'p.name as description',
+        'soi.quantity',
+        'soi.unit_price',
+        'soi.line_total',
+      ])
+      .where('soi.order_id', '=', args.orderId)
+      .execute();
+
+    return {
+      orderId: args.orderId,
+      orderNo: args.orderNo,
+      invoiceNo: args.invoiceNo,
+      warehouse: wh,
+      customerName: customer?.name ?? null,
+      paymentMethod: args.paymentMethod,
+      currency: args.currency,
+      totals: args.totals,
+      lines: items.map((i) => ({
+        sku: i.sku,
+        description: i.description ?? '',
+        quantity: Number(i.quantity),
+        unit_price: Number(i.unit_price),
+        line_total: Number(i.line_total),
+      })),
+      occurredAt: new Date(),
+    };
   }
 
   /**
