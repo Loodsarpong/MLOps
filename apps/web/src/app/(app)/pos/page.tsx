@@ -34,7 +34,7 @@ export default function POSPage() {
         const saved = localStorage.getItem('pos_warehouse_id');
         // Single-warehouse deployments: always auto-select the only one.
         const defaultId = ws.length === 1
-          ? ws[0].id
+          ? ws[0]?.id ?? ''
           : saved && ws.some((w) => w.id === saved)
             ? saved
             : ws.find((w) => w.type === 'outlet')?.id ?? ws[0]?.id ?? '';
@@ -109,7 +109,7 @@ export default function POSPage() {
           <h2 className="font-semibold">Products</h2>
           {warehouses.length === 1 ? (
             <span className="rounded-md bg-shea-50 px-2 py-1 text-xs text-shea-700">
-              {warehouses[0].name}
+              {warehouses[0]?.name}
             </span>
           ) : (
             <select
