@@ -13,7 +13,7 @@ export const PosSaleSchema = z.object({
   session_id: z.string().uuid().optional(),
   warehouse_id: z.string().uuid(),
   customer_id: z.string().uuid().optional(),
-  currency: z.string().length(3).default('GHS'),
+  currency: z.string().length(3).default('USD'),
   fx_rate: z.number().positive().default(1),
   discount_total: z.number().nonnegative().default(0),
   items: z.array(PosSaleItemSchema).min(1),

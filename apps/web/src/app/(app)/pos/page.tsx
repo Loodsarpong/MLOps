@@ -32,9 +32,12 @@ export default function POSPage() {
       api<Warehouse[]>('/warehouses').then((ws) => {
         setWarehouses(ws);
         const saved = localStorage.getItem('pos_warehouse_id');
-        const defaultId = saved && ws.some((w) => w.id === saved)
-          ? saved
-          : ws.find((w) => w.type === 'outlet')?.id ?? ws[0]?.id ?? '';
+        // Single-warehouse deployments: always auto-select the only one.
+        const defaultId = ws.length === 1
+          ? ws[0].id
+          : saved && ws.some((w) => w.id === saved)
+            ? saved
+            : ws.find((w) => w.type === 'outlet')?.id ?? ws[0]?.id ?? '';
         setWarehouseId(defaultId);
       }).catch((e) => toast.error('Failed to load warehouses', { description: e.message })),
       api<Product[]>('/products').then(setProducts)
@@ -104,16 +107,22 @@ export default function POSPage() {
       <section className="col-span-8 flex flex-col rounded-xl bg-white p-4 shadow">
         <div className="mb-3 flex items-center gap-3">
           <h2 className="font-semibold">Products</h2>
-          <select
-            value={warehouseId}
-            onChange={(e) => setWarehouseId(e.target.value)}
-            className="rounded-md border px-2 py-1 text-sm"
-          >
-            <option value="" disabled>Select warehouse…</option>
-            {warehouses.map((w) => (
-              <option key={w.id} value={w.id}>{w.name} ({w.type})</option>
-            ))}
-          </select>
+          {warehouses.length === 1 ? (
+            <span className="rounded-md bg-shea-50 px-2 py-1 text-xs text-shea-700">
+              {warehouses[0].name}
+            </span>
+          ) : (
+            <select
+              value={warehouseId}
+              onChange={(e) => setWarehouseId(e.target.value)}
+              className="rounded-md border px-2 py-1 text-sm"
+            >
+              <option value="" disabled>Select warehouse…</option>
+              {warehouses.map((w) => (
+                <option key={w.id} value={w.id}>{w.name} ({w.type})</option>
+              ))}
+            </select>
+          )}
           <div className="relative ml-auto w-64">
             <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-shea-700" />
             <input
