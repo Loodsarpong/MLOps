@@ -18,7 +18,7 @@ const nav = [
   { href: '/products',           label: 'Products',    icon: Package, soon: true },
   { href: '/procurement/orders', label: 'Procurement', icon: Truck, soon: true },
   { href: '/suppliers',          label: 'Suppliers',   icon: Building2, soon: true },
-  { href: '/settings/tenant',    label: 'Settings',    icon: Settings, soon: true },
+  { href: '/settings/warehouses', label: 'Settings',    icon: Settings },
 ];
 
 export function Sidebar() {
