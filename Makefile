@@ -4,6 +4,10 @@
 .DEFAULT_GOAL := help
 COMPOSE := docker compose -f infra/docker/docker-compose.yml
 
+# Source .env (if present) before running a target; bullet-proof regardless of
+# .env contents (handles quoted values, special chars, comments).
+LOAD_ENV := set -a; [ -f .env ] && . ./.env; set +a;
+
 .PHONY: help setup install db migrate seed api web worker down reset test lint logs
 
 help: ## List the available targets
@@ -17,20 +21,20 @@ install: ## Install workspace dependencies (frozen lockfile)
 
 db: migrate seed ## Migrate then seed (run after `make install`)
 
-migrate: ## Apply DB migrations
-	pnpm --filter @ns/api migrate
+migrate: ## Apply DB migrations (loads .env automatically)
+	@$(LOAD_ENV) pnpm --filter @ns/api migrate
 
-seed: ## Seed demo tenant + Brendamour Blue Ash DC + roles
-	pnpm --filter @ns/api seed
+seed: ## Seed demo tenant + Brendamour Blue Ash DC + roles (loads .env automatically)
+	@$(LOAD_ENV) pnpm --filter @ns/api seed
 
 api: ## Run the API in dev mode (http://localhost:4000)
-	pnpm --filter @ns/api dev
+	@$(LOAD_ENV) pnpm --filter @ns/api dev
 
 web: ## Run the Web app in dev mode (http://localhost:3000)
-	pnpm --filter @ns/web dev
+	@$(LOAD_ENV) pnpm --filter @ns/web dev
 
 worker: ## Run the SQS worker locally
-	pnpm --filter @ns/api exec ts-node src/workers/main.worker.ts
+	@$(LOAD_ENV) pnpm --filter @ns/api exec ts-node src/workers/main.worker.ts
 
 down: ## Stop docker services (keeps the Postgres volume)
 	$(COMPOSE) down
