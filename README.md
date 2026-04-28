@@ -31,28 +31,43 @@ invoicing with QuickBooks Online sync, AR/AP, payroll, CRM, and analytics.
 8. [Security & RBAC](docs/SECURITY.md)
 9. [Repository layout](docs/REPO_STRUCTURE.md)
 
-## Quick start (local dev)
+## Quick start (local dev, macOS)
+
+Prereqs: install **Homebrew**, **Docker Desktop** (and start it), **Node 20**, and **pnpm 9**.
 
 ```bash
-# 1. Clone + bootstrap
-git clone https://github.com/loodsarpong/mlops.git naturalshea-erp
-cd naturalshea-erp
-cp .env.example .env
-
-# 2. Start dependencies (Postgres + Redis) via Docker
-docker compose -f infra/docker/docker-compose.yml up -d
-
-# 3. Install + migrate + seed
-pnpm install
-pnpm --filter @ns/api migrate
-pnpm --filter @ns/api seed
-
-# 4. Run services (separate terminals)
-pnpm --filter @ns/api dev       # http://localhost:4000
-pnpm --filter @ns/web dev       # http://localhost:3000
+brew install node@20 pnpm
+brew install --cask docker   # then open Docker Desktop once
 ```
 
-Default login after seeding: `admin@naturalshea.care` / `ChangeMe!123`.
+Then, from the repo root:
+
+```bash
+git clone https://github.com/loodsarpong/MLOps.git naturalshea-erp
+cd naturalshea-erp
+
+# Bootstrap: prereq check + .env + Postgres/Redis/MinIO via docker compose
+make setup
+
+# Install + migrate + seed (Brendamour Blue Ash DC, demo tenant, roles)
+make install
+make db
+
+# Run the API and Web in two terminals
+make api      # http://localhost:4000
+make web      # http://localhost:3000
+```
+
+Sign in at http://localhost:3000 with the dev backdoor:
+
+- email: `lsarpong@naturalsheacare.com`
+- password: `dev-password`
+
+Run `make help` to see all targets (`reset`, `test`, `lint`, `logs`, …).
+
+> Without `make`, the equivalent scripts are documented in
+> [`scripts/dev-setup.sh`](scripts/dev-setup.sh) and the per-package `pnpm`
+> commands listed in `apps/api/package.json` and `apps/web/package.json`.
 
 ## Tech stack at a glance
 
