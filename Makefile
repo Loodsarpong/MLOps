@@ -24,8 +24,11 @@ db: migrate seed ## Migrate then seed (run after `make install`)
 migrate: ## Apply DB migrations (loads .env automatically)
 	@$(LOAD_ENV) pnpm --filter @ns/api migrate
 
-seed: ## Seed demo tenant + Brendamour Blue Ash DC + roles (loads .env automatically)
-	@$(LOAD_ENV) pnpm --filter @ns/api seed
+seed: ## Seed roles + demo tenant + demo inventory (uses the postgres container, no host psql required)
+	@for f in db/seeds/01_roles.sql db/seeds/02_demo_tenant.sql db/seeds/03_demo_inventory.sql; do \
+	  echo "▶ $$f"; \
+	  $(COMPOSE) exec -T postgres psql -U app -d app -v ON_ERROR_STOP=1 < "$$f" || exit 1; \
+	done
 
 api: ## Run the API in dev mode (http://localhost:4000)
 	@$(LOAD_ENV) pnpm --filter @ns/api dev
