@@ -8,7 +8,7 @@ COMPOSE := docker compose -f infra/docker/docker-compose.yml
 # .env contents (handles quoted values, special chars, comments).
 LOAD_ENV := set -a; [ -f .env ] && . ./.env; set +a;
 
-.PHONY: help setup install db migrate seed api web worker down reset test lint logs
+.PHONY: help setup install db migrate seed api web worker down reset test lint logs admin-password admin-password-default
 
 help: ## List the available targets
 	@awk 'BEGIN{FS=":.*##";printf "Usage: make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z_-]+:.*?##/{printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -19,7 +19,7 @@ setup: ## One-shot: prereq check + .env + start Postgres/Redis/MinIO (macOS-frie
 install: ## Install workspace dependencies (frozen lockfile)
 	pnpm install --frozen-lockfile
 
-db: migrate seed ## Migrate then seed (run after `make install`)
+db: migrate seed admin-password-default ## Migrate, seed, set demo admin password to 'dev-password'
 
 migrate: ## Apply DB migrations (loads .env automatically)
 	@$(LOAD_ENV) pnpm --filter @ns/api migrate
@@ -56,3 +56,13 @@ lint: ## Run linters
 
 logs: ## Tail docker compose logs
 	$(COMPOSE) logs -f --tail=200
+
+admin-password: ## Set/reset a user's password. Usage: make admin-password EMAIL=x@y.z PASSWORD=secret
+	@if [ -z "$(EMAIL)" ] || [ -z "$(PASSWORD)" ]; then \
+	  echo "Usage: make admin-password EMAIL=x@y.z PASSWORD=secret"; exit 1; \
+	fi
+	@$(LOAD_ENV) pnpm --filter @ns/api exec ts-node src/scripts/set-password.ts "$(EMAIL)" "$(PASSWORD)"
+
+admin-password-default: ## Bootstrap demo admin password (lsarpong@…/dev-password) — local dev only
+	@$(LOAD_ENV) pnpm --filter @ns/api exec ts-node src/scripts/set-password.ts \
+	  lsarpong@naturalsheacare.com dev-password --no-force-change

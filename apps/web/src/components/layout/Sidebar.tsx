@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, ShoppingCart, ReceiptText, Package, Warehouse, Truck,
-  Users2, Building2, LineChart, Settings,
+  Users2, Building2, LineChart, Settings, KeyRound,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -19,6 +19,7 @@ const nav = [
   { href: '/procurement/orders', label: 'Procurement', icon: Truck, soon: true },
   { href: '/suppliers',          label: 'Suppliers',   icon: Building2, soon: true },
   { href: '/settings/warehouses', label: 'Settings',    icon: Settings },
+  { href: '/settings/users',      label: 'Users',       icon: KeyRound },
 ];
 
 export function Sidebar() {

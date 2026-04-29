@@ -51,7 +51,11 @@ export interface TenantTable {
 
 export interface UserTable {
   id: Generated<UUID>; tenant_id: UUID; cognito_sub: string | null; email: string;
-  full_name: string; phone: string | null; is_active: boolean;
+  full_name: string; phone: string | null; is_active: Generated<boolean>;
+  password_hash: string | null;
+  must_change_password: Generated<boolean>;
+  failed_login_count: Generated<number>;
+  locked_until: TimestampTz | null;
   last_login_at: TimestampTz | null;
   created_at: Generated<TimestampTz>; updated_at: Generated<TimestampTz>;
 }
