@@ -60,6 +60,7 @@
     "eslint": "^8.56.0",
     "node-pg-migrate": "^7.0.0",
     "supertest": "^6.3.3",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"
   }
