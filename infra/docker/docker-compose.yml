@@ -1,8 +1,8 @@
-version: '3.9'
 
 services:
   postgres:
     image: postgres:15-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
@@ -16,6 +16,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports: ['6379:6379']
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
@@ -23,6 +24,7 @@ services:
 
   minio:
     image: minio/minio
+    restart: unless-stopped
     command: server /data --console-address ':9001'
     ports: ['9000:9000', '9001:9001']
     environment:
