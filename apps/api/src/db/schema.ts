@@ -65,11 +65,11 @@ export interface UserRoleTable { user_id: UUID; role_id: UUID; }
 
 export interface CustomerTable {
   id: Generated<UUID>; tenant_id: UUID; code: string; name: string;
-  segment: 'retail'|'wholesale'|'distributor'|'online';
+  segment: Generated<'retail'|'wholesale'|'distributor'|'online'>;
   email: string | null; phone: string | null;
   billing_address: unknown; shipping_address: unknown; tax_id: string | null;
-  credit_limit: Numeric; currency: string; loyalty_points: number;
-  is_active: boolean; qbo_customer_id: string | null;
+  credit_limit: Generated<Numeric>; currency: Generated<string>; loyalty_points: Generated<number>;
+  is_active: Generated<boolean>; qbo_customer_id: string | null;
   created_at: Generated<TimestampTz>; updated_at: Generated<TimestampTz>;
 }
 
@@ -83,10 +83,11 @@ export interface SupplierTable {
 
 export interface ProductTable {
   id: Generated<UUID>; tenant_id: UUID; sku: string; upc: string | null;
-  name: string; description: string | null; category: string | null; uom: string;
-  is_raw_material: boolean; is_tracked_by_batch: boolean;
-  tax_rate_pct: Numeric; cost_price: Numeric; base_price: Numeric;
-  currency: string; weight_grams: number | null; is_active: boolean;
+  name: string; description: string | null; category: string | null;
+  uom: Generated<string>;
+  is_raw_material: Generated<boolean>; is_tracked_by_batch: Generated<boolean>;
+  tax_rate_pct: Generated<Numeric>; cost_price: Generated<Numeric>; base_price: Generated<Numeric>;
+  currency: Generated<string>; weight_grams: Numeric | null; is_active: Generated<boolean>;
   qbo_item_id: string | null;
   created_at: Generated<TimestampTz>; updated_at: Generated<TimestampTz>;
 }
