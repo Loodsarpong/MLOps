@@ -4,7 +4,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 // happens server-side; this is a coarse gate for UX.
 export function middleware(req: NextRequest) {
   const protectedPrefixes = ['/dashboard', '/pos', '/sales', '/invoices', '/inventory',
-    '/customers', '/suppliers', '/products', '/procurement', '/payroll', '/reports', '/settings'];
+    '/customers', '/suppliers', '/products', '/procurement', '/payroll', '/reports', '/settings',
+    '/change-password'];
   const needsAuth = protectedPrefixes.some((p) => req.nextUrl.pathname.startsWith(p));
   if (!needsAuth) return NextResponse.next();
 

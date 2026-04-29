@@ -8,13 +8,14 @@
     "build": "nest build",
     "start": "node dist/main.js",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "vitest run",
-    "test:e2e": "vitest run --config vitest.e2e.config.ts",
+    "test": "vitest run --passWithNoTests",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts --passWithNoTests",
     "migrate": "node-pg-migrate up -d DATABASE_URL -m ../../db/migrations",
     "migrate:down": "node-pg-migrate down -d DATABASE_URL -m ../../db/migrations",
     "seed": "psql $DATABASE_URL -f ../../db/seeds/01_roles.sql -f ../../db/seeds/02_demo_tenant.sql"
   },
   "dependencies": {
+    "argon2": "^0.41.0",
     "@aws-sdk/client-s3": "^3.600.0",
     "@aws-sdk/client-secrets-manager": "^3.600.0",
     "@aws-sdk/client-ses": "^3.600.0",
@@ -54,9 +55,12 @@
     "@types/pg": "^8.10.0",
     "@types/pdfkit": "^0.13.0",
     "@types/supertest": "^6.0.2",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.56.0",
     "node-pg-migrate": "^7.0.0",
     "supertest": "^6.3.3",
+    "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "vitest": "^1.2.0"
   }

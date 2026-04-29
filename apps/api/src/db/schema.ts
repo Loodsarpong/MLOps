@@ -36,6 +36,7 @@ export interface Database {
   payslips: PayslipTable;
   audit_logs: AuditLogTable;
   notifications: NotificationTable;
+  notification_log: NotificationLogTable;
   idempotency_keys: IdempotencyKeyTable;
   tenant_integrations: TenantIntegrationTable;
   pos_sessions: PosSessionTable;
@@ -44,12 +45,17 @@ export interface Database {
 export interface TenantTable {
   id: Generated<UUID>; name: string; slug: string;
   base_currency: string; timezone: string; plan: string; is_active: boolean;
+  default_tax_rate_pct: Numeric;
   created_at: Generated<TimestampTz>; updated_at: Generated<TimestampTz>;
 }
 
 export interface UserTable {
   id: Generated<UUID>; tenant_id: UUID; cognito_sub: string | null; email: string;
-  full_name: string; phone: string | null; is_active: boolean;
+  full_name: string; phone: string | null; is_active: Generated<boolean>;
+  password_hash: string | null;
+  must_change_password: Generated<boolean>;
+  failed_login_count: Generated<number>;
+  locked_until: TimestampTz | null;
   last_login_at: TimestampTz | null;
   created_at: Generated<TimestampTz>; updated_at: Generated<TimestampTz>;
 }
@@ -59,11 +65,11 @@ export interface UserRoleTable { user_id: UUID; role_id: UUID; }
 
 export interface CustomerTable {
   id: Generated<UUID>; tenant_id: UUID; code: string; name: string;
-  segment: 'retail'|'wholesale'|'distributor'|'online';
+  segment: Generated<'retail'|'wholesale'|'distributor'|'online'>;
   email: string | null; phone: string | null;
   billing_address: unknown; shipping_address: unknown; tax_id: string | null;
-  credit_limit: Numeric; currency: string; loyalty_points: number;
-  is_active: boolean; qbo_customer_id: string | null;
+  credit_limit: Generated<Numeric>; currency: Generated<string>; loyalty_points: Generated<number>;
+  is_active: Generated<boolean>; qbo_customer_id: string | null;
   created_at: Generated<TimestampTz>; updated_at: Generated<TimestampTz>;
 }
 
@@ -77,10 +83,11 @@ export interface SupplierTable {
 
 export interface ProductTable {
   id: Generated<UUID>; tenant_id: UUID; sku: string; upc: string | null;
-  name: string; description: string | null; category: string | null; uom: string;
-  is_raw_material: boolean; is_tracked_by_batch: boolean;
-  tax_rate_pct: Numeric; cost_price: Numeric; base_price: Numeric;
-  currency: string; weight_grams: number | null; is_active: boolean;
+  name: string; description: string | null; category: string | null;
+  uom: Generated<string>;
+  is_raw_material: Generated<boolean>; is_tracked_by_batch: Generated<boolean>;
+  tax_rate_pct: Generated<Numeric>; cost_price: Generated<Numeric>; base_price: Generated<Numeric>;
+  currency: Generated<string>; weight_grams: Numeric | null; is_active: Generated<boolean>;
   qbo_item_id: string | null;
   created_at: Generated<TimestampTz>; updated_at: Generated<TimestampTz>;
 }
@@ -88,6 +95,7 @@ export interface ProductTable {
 export interface WarehouseTable {
   id: Generated<UUID>; tenant_id: UUID; code: string; name: string;
   type: string; address: unknown; is_active: boolean;
+  clerk_name: string | null; clerk_email: string | null; clerk_phone: string | null;
 }
 
 export interface BatchTable {
@@ -116,6 +124,7 @@ export interface SalesOrderTable {
   status: 'draft'|'confirmed'|'picked'|'shipped'|'delivered'|'cancelled'|'returned';
   currency: string; fx_rate: Numeric;
   subtotal: Numeric; discount_total: Numeric; tax_total: Numeric; total: Numeric;
+  tax_applied: boolean; tax_rate_pct: Numeric | null;
   notes: string | null; created_by: UUID | null;
   created_at: Generated<TimestampTz>; updated_at: Generated<TimestampTz>;
 }
@@ -225,6 +234,15 @@ export interface NotificationTable {
   id: Generated<UUID>; tenant_id: UUID; user_id: UUID | null;
   channel: string; topic: string; payload: unknown;
   read_at: TimestampTz | null; sent_at: TimestampTz | null;
+  created_at: Generated<TimestampTz>;
+}
+
+export interface NotificationLogTable {
+  id: Generated<UUID>; tenant_id: UUID;
+  ref_type: string; ref_id: UUID;
+  recipient: string; from_addr: string | null;
+  channel: string; status: string;
+  error: string | null; message_id: string | null;
   created_at: Generated<TimestampTz>;
 }
 

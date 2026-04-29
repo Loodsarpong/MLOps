@@ -1,4 +1,4 @@
 code,name,segment,email,phone,billing_line1,billing_city,billing_country,tax_id,credit_limit,currency
-CUST-0001,Beauty Haven Ltd,wholesale,orders@beautyhaven.com,+233501234567,15 Ring Rd,Accra,GH,C0005678901,5000.00,GHS
-CUST-0002,Radiant Skin Stores,distributor,buy@radiantskin.africa,+233244111222,Market St,Kumasi,GH,C0008887765,20000.00,GHS
-CUST-0003,Walk-in Retail,retail,,,,,,0.00,GHS
+CUST-0001,Beauty Haven LLC,wholesale,orders@beautyhaven.com,+1-513-555-0101,4500 Reading Rd,Cincinnati,US,12-3456789,5000.00,USD
+CUST-0002,Radiant Skin Stores,distributor,buy@radiantskin.us,+1-614-555-0144,210 N High St,Columbus,US,98-7654321,20000.00,USD
+CUST-0003,Walk-in Retail,retail,,,,,,0.00,USD

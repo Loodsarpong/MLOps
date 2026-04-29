@@ -3,6 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 export interface TenantContext {
   tenantId: string;
   userId: string;
+  email?: string;
   roles: string[];
   ip?: string;
   userAgent?: string;

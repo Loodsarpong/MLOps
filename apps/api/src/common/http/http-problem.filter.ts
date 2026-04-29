@@ -34,7 +34,15 @@ export class HttpProblemFilter implements ExceptionFilter {
       return;
     }
 
-    this.log.error('unhandled', ex as Error);
-    res.status(status).json({ ...base, detail: 'Unexpected error' });
+    const err = ex as Error & { code?: string };
+    this.log.error(err?.stack ?? err?.message ?? String(ex));
+    const payload: Record<string, unknown> = { ...base, detail: 'Unexpected error' };
+    if (process.env.NODE_ENV !== 'production') {
+      payload.detail = err?.message ?? 'Unexpected error';
+      payload.name = err?.name;
+      payload.code = err?.code;
+      payload.stack = err?.stack?.split('\n').slice(0, 10);
+    }
+    res.status(status).json(payload);
   }
 }

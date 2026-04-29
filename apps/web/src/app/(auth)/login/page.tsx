@@ -16,8 +16,8 @@ export default function LoginPage() {
     setErr(null);
     setBusy(true);
     try {
-      await signIn(email, password);
-      router.push('/dashboard');
+      const r = await signIn(email, password);
+      router.push(r.must_change_password ? '/change-password' : '/dashboard');
     } catch (e) {
       setErr((e as Error).message);
     } finally {

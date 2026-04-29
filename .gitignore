@@ -1,7 +1,13 @@
 node_modules/
 dist/
 .next/
+next-env.d.ts
 coverage/
+
+# next-pwa build artifacts
+apps/web/public/sw.js
+apps/web/public/workbox-*.js
+
 .env
 .env.local
 *.log
@@ -18,3 +24,6 @@ crash.log
 .idea/
 .vscode/
 *.swp
+
+# TypeScript incremental build cache
+*.tsbuildinfo

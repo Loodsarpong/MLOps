@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 
-export const Currency = z.enum(['GHS', 'USD', 'EUR', 'GBP', 'NGN']);
+export const Currency = z.enum(['USD', 'EUR', 'GBP', 'GHS', 'NGN']);
 export type Currency = z.infer<typeof Currency>;
 
 export const CustomerSegment = z.enum(['retail', 'wholesale', 'distributor', 'online']);
