@@ -150,6 +150,7 @@ Run `make help` for the full target list. Useful ones:
 | Understand the API surface         | `docs/API.md` + `apps/api/src/modules/*/`                       |
 | Understand the frontend            | `docs/FRONTEND.md` + `apps/web/src/app/`                        |
 | Build the next thing (Phase C)     | `docs/PHASE_C_INVOICING.md`                                     |
+| Get the app on a real desktop      | `docs/HOSTING.md` (three paths, deferred until Phase C ships)   |
 | Understand QuickBooks plans        | `docs/QUICKBOOKS_INTEGRATION.md`                                |
 | Bulk-load data                     | `docs/CSV_IMPORT.md` + `templates/csv/`                         |
 | Deploy to AWS                      | `docs/DEPLOYMENT.md` + `infra/terraform/`                       |
@@ -237,15 +238,21 @@ the canonical product direction.
 
 Decide these before they block work:
 
-1. **Single-tenant or multi-tenant in prod?** RLS infrastructure exists;
+1. **Hosting path.** Three documented options in
+   [`HOSTING.md`](HOSTING.md): Path A (tunnel from your laptop, ~1 hour,
+   demo only), Path B (Vercel + Fly.io + Neon, ~1–2 days, ~$30–60/mo,
+   recommended first hosted release), Path C (AWS via the existing
+   `infra/terraform/`, ~5–7 days, ~$350/mo, eventual target). Decision
+   deferred until after Phase C ships.
+2. **Single-tenant or multi-tenant in prod?** RLS infrastructure exists;
    the business currently runs one tenant (NaturalShea / Brendamour).
    Decide whether to keep multi-tenancy as a future option or simplify
    the codebase down to one tenant.
-2. **QuickBooks integration scope.** The OAuth handshake is wired.
+3. **QuickBooks integration scope.** The OAuth handshake is wired.
    Decide: (a) which entities sync (customers, invoices, payments, items?),
    (b) one-way or two-way, (c) push or pull (we currently have an SQS queue
    env var for it). Picked up *after* Phase C ships.
-3. **Batch & expiry surfacing.** The data model tracks lots; do clerks
+4. **Batch & expiry surfacing.** The data model tracks lots; do clerks
    need an expiry-soon dashboard? Cosmetic regulation may force this
    question.
 

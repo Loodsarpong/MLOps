@@ -136,6 +136,8 @@ naturalshea-erp/
 │   ├── DATABASE_SCHEMA.md
 │   ├── API.md
 │   ├── FRONTEND.md
+│   ├── PHASE_C_INVOICING.md         # Plan for the next ship: invoicing UI
+│   ├── HOSTING.md                   # Three hosting paths to a real desktop icon
 │   ├── QUICKBOOKS_INTEGRATION.md
 │   ├── CSV_IMPORT.md
 │   ├── DEPLOYMENT.md
