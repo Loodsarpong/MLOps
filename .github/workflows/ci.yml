@@ -42,10 +42,10 @@ jobs:
           ruff format --check .
 
       - name: Type check (mypy)
-        run: mypy
+        run: python -m mypy
 
       - name: Run tests with coverage
-        run: pytest --cov=src --cov-report=term-missing --cov-report=xml tests/unit
+        run: python -m pytest --cov=src --cov-report=term-missing --cov-report=xml tests/unit
 
       - name: Upload coverage artifact
         if: matrix.python-version == '3.11'

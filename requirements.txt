@@ -1,2 +1,4 @@
-# Runtime dependencies. Pin versions when adding real libs.
-# Intentionally empty during scaffolding — add as features land.
+# Runtime dependencies. Pin exact versions for reproducibility.
+numpy==2.1.3
+scikit-learn==1.5.2
+joblib==1.4.2

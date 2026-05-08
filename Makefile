@@ -1,4 +1,4 @@
-.PHONY: help install install-dev format lint typecheck test test-unit test-integration cov audit clean ci
+.PHONY: help install install-dev format lint typecheck test test-unit test-integration cov audit clean ci train
 
 PYTHON ?= python
 PIP    ?= $(PYTHON) -m pip
@@ -16,6 +16,7 @@ help:
 	@echo "  cov              Run tests with coverage report"
 	@echo "  audit            Audit dependencies for known vulnerabilities"
 	@echo "  ci               Run everything CI runs"
+	@echo "  train            Run the iris training pipeline"
 	@echo "  clean            Remove caches and build artifacts"
 
 install:
@@ -33,23 +34,26 @@ lint:
 	ruff format --check .
 
 typecheck:
-	mypy
+	$(PYTHON) -m mypy
 
 test: test-unit
 
 test-unit:
-	pytest tests/unit
+	$(PYTHON) -m pytest tests/unit
 
 test-integration:
-	pytest tests/integration -m integration
+	$(PYTHON) -m pytest tests/integration -m integration
 
 cov:
-	pytest --cov=src --cov-report=term-missing --cov-report=xml
+	$(PYTHON) -m pytest --cov=src --cov-report=term-missing --cov-report=xml
 
 audit:
 	pip-audit -r requirements.txt
 
 ci: lint typecheck test cov
+
+train:
+	$(PYTHON) -m src.pipelines.train_pipeline --output-dir models/iris
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage coverage.xml htmlcov
