@@ -1,11 +1,14 @@
 # Default pipeline configuration.
-# Real pipelines should override these via Hydra/OmegaConf composition.
+# Override at runtime via:
+#   python -m src.pipelines.train_pipeline --config configs/default.yaml \
+#     --override training.max_iter=2000 --override tracking.enabled=false
 
 project:
-  name: mlops
+  name: iris-baseline
   seed: 42
 
 data:
+  dataset: iris
   raw_dir: data/raw
   processed_dir: data/processed
   external_dir: data/external
@@ -13,6 +16,15 @@ data:
 training:
   test_size: 0.2
   random_state: 42
+  max_iter: 1000
+  regularisation_strength: 1.0
+
+artifacts:
+  output_dir: models/iris
+
+tracking:
+  enabled: true
+  experiment_name: iris-baseline
 
 logging:
   level: INFO
