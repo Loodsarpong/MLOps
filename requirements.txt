@@ -1,0 +1,2 @@
+# Runtime dependencies. Pin versions when adding real libs.
+# Intentionally empty during scaffolding — add as features land.

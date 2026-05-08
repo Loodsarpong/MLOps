@@ -1,0 +1,18 @@
+# Default pipeline configuration.
+# Real pipelines should override these via Hydra/OmegaConf composition.
+
+project:
+  name: mlops
+  seed: 42
+
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  external_dir: data/external
+
+training:
+  test_size: 0.2
+  random_state: 42
+
+logging:
+  level: INFO
