@@ -1,4 +1,4 @@
-.PHONY: help install install-dev format lint typecheck test test-unit test-integration cov audit clean ci train
+.PHONY: help install install-dev format lint typecheck test test-unit test-integration cov audit clean ci train serve
 
 PYTHON ?= python
 PIP    ?= $(PYTHON) -m pip
@@ -17,6 +17,7 @@ help:
 	@echo "  audit            Audit dependencies for known vulnerabilities"
 	@echo "  ci               Run everything CI runs"
 	@echo "  train            Run the iris training pipeline"
+	@echo "  serve            Start the model serving API on :8000"
 	@echo "  clean            Remove caches and build artifacts"
 
 install:
@@ -54,6 +55,9 @@ ci: lint typecheck test cov
 
 train:
 	$(PYTHON) -m src.pipelines.train_pipeline --output-dir models/iris
+
+serve:
+	$(PYTHON) -m uvicorn src.serving.app:app --host $${SERVING_HOST:-0.0.0.0} --port $${SERVING_PORT:-8000} --reload
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage coverage.xml htmlcov
