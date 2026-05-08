@@ -17,8 +17,11 @@ testing the **PWA**, and shipping to AWS. Every command is copy-paste ready.
 | Worker | Nest standalone (SQS poller) | — |
 | Cloud (prod) | ECS Fargate, RDS, ElastiCache, S3, CloudFront, Cognito, SQS | — |
 
-Repo: `Loodsarpong/MLOps`
-Branch: `claude/naturalshea-erp-system-RcvvA`
+Repo: `Loodsarpong/MLOps` (the GitHub name is historical — the project
+inside is the NaturalShea Care ERP, see [`HANDOVER.md`](HANDOVER.md)).
+Active integration branch: `main`. Most product features were built on
+`claude/naturalshea-erp-system-RcvvA`; ongoing handover work lives on
+`claude/handover-documentation-To9Pq`.
 
 ---
 
@@ -144,6 +147,17 @@ All three should show `running` / `healthy` after ~20 s.
 
 ## 4. Apply migrations + seeds
 
+The simplest path is `make db`, which runs the migrations through
+`node-pg-migrate` and then pipes the seed SQL files through the Postgres
+container (so you do not need a host `psql`):
+
+```bash
+make db        # = make migrate + make seed + bootstrap demo admin password
+```
+
+If you prefer to run the SQL directly with host `psql`, the current
+migration set is **0001 → 0010**:
+
 ```bash
 export DATABASE_URL=postgres://app:app@localhost:5432/app
 
@@ -153,21 +167,26 @@ psql "$DATABASE_URL" -f db/migrations/0003_sales_invoicing.sql
 psql "$DATABASE_URL" -f db/migrations/0004_procurement_ap.sql
 psql "$DATABASE_URL" -f db/migrations/0005_payroll_audit.sql
 psql "$DATABASE_URL" -f db/migrations/0006_rls_policies.sql
+psql "$DATABASE_URL" -f db/migrations/0007_locale_us.sql           # GHS → USD, Africa/Accra → America/New_York
+psql "$DATABASE_URL" -f db/migrations/0008_warehouse_clerk_and_tax.sql  # warehouse clerk + tenant tax + per-sale tax flag + notification_log
+psql "$DATABASE_URL" -f db/migrations/0009_relax_force_rls.sql     # drop FORCE so admin reads work
+psql "$DATABASE_URL" -f db/migrations/0010_user_passwords.sql      # argon2 password fields + lockout
 
 psql "$DATABASE_URL" -f db/seeds/01_roles.sql
 psql "$DATABASE_URL" -f db/seeds/02_demo_tenant.sql
+psql "$DATABASE_URL" -f db/seeds/03_demo_inventory.sql
 ```
 
-A clean run prints `CREATE TABLE` / `INSERT 0 N` lines. Expect `INSERT 0 6` roles,
-`INSERT 0 3` warehouses, `INSERT 0 5` products, `INSERT 0 3` customers,
-`INSERT 0 2` suppliers.
+A clean run prints `CREATE TABLE` / `INSERT 0 N` lines. With the current
+seeds, expect roughly: `INSERT 0 6` roles, **`INSERT 0 1` warehouse**
+(Brendamour Blue Ash DC, code `WH-BLUEASH` — the tenant is now US-only),
+plus the products / customers / inventory rows from `02_demo_tenant.sql` and
+`03_demo_inventory.sql`. Currency in seeded data is `USD`.
 
 ### Re-seeding from scratch
 
 ```bash
-docker compose -f infra/docker/docker-compose.yml down -v   # wipes pgdata volume
-docker compose -f infra/docker/docker-compose.yml up -d
-# then re-run the migrate + seed block above
+make reset      # docker compose down -v && up -d && migrate + seed
 ```
 
 ---
@@ -312,7 +331,7 @@ pnpm -r test
 # Commit
 git add -A
 git commit -m "feat(scope): short description"
-git push origin claude/naturalshea-erp-system-RcvvA
+git push origin <your-feature-or-claude-branch>
 ```
 
 ---

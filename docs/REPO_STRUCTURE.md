@@ -85,10 +85,15 @@ naturalshea-erp/
 │   │   ├── 0003_sales_invoicing.sql
 │   │   ├── 0004_procurement_ap.sql
 │   │   ├── 0005_payroll_audit.sql
-│   │   └── 0006_rls_policies.sql
+│   │   ├── 0006_rls_policies.sql
+│   │   ├── 0007_locale_us.sql
+│   │   ├── 0008_warehouse_clerk_and_tax.sql
+│   │   ├── 0009_relax_force_rls.sql
+│   │   └── 0010_user_passwords.sql
 │   └── seeds/
 │       ├── 01_roles.sql
-│       └── 02_demo_tenant.sql
+│       ├── 02_demo_tenant.sql
+│       └── 03_demo_inventory.sql
 │
 ├── infra/
 │   ├── terraform/
@@ -126,6 +131,7 @@ naturalshea-erp/
 │   └── generate-barcodes.ts
 │
 ├── docs/
+│   ├── HANDOVER.md                  # Start here when taking ownership
 │   ├── ARCHITECTURE.md
 │   ├── DATABASE_SCHEMA.md
 │   ├── API.md
@@ -133,6 +139,7 @@ naturalshea-erp/
 │   ├── QUICKBOOKS_INTEGRATION.md
 │   ├── CSV_IMPORT.md
 │   ├── DEPLOYMENT.md
+│   ├── RUNBOOK.md
 │   ├── SECURITY.md
 │   └── REPO_STRUCTURE.md
 │

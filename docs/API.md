@@ -1,7 +1,8 @@
 # REST API Reference
 
 Base URL: `https://api.naturalshea.care/v1`
-Auth: `Authorization: Bearer <JWT>` (issued by AWS Cognito).
+Auth: `Authorization: Bearer <JWT>` (issued by AWS Cognito in prod, or the
+local `/auth/login` endpoint in dev — see §1).
 All mutating requests accept an `Idempotency-Key` header.
 
 ## Conventions
@@ -23,10 +24,26 @@ All mutating requests accept an `Idempotency-Key` header.
 
 | Method | Path                    | Description                                        |
 | ------ | ----------------------- | -------------------------------------------------- |
-| POST   | `/auth/login`           | Exchange Cognito code for JWT + refresh            |
+| POST   | `/auth/login`           | Email + password (argon2id) → JWT (Phase A)        |
+| POST   | `/auth/change-password` | Force-change after admin-set or self-service       |
 | POST   | `/auth/refresh`         | Rotate JWT                                         |
 | POST   | `/auth/logout`          | Revoke refresh token                               |
 | GET    | `/auth/me`              | Current user, roles, tenant                        |
+
+**Auth modes.**
+
+- **Local password auth (Phase A — current default).** Implemented in
+  `apps/api/src/modules/auth/`. Passwords stored as argon2id hashes in
+  `users.password_hash`, with a 5-strike lockout
+  (`failed_login_count` / `locked_until`) and a `must_change_password` flag
+  that admins set when issuing temporary passwords. The login response
+  includes `must_change_password` so the web app can route to
+  `/change-password` before letting the session reach the dashboard.
+- **Cognito JWT (target state).** `JWT_ISSUER` + `JWT_AUDIENCE` env vars
+  configure JWKS verification. Not yet exercised against a real user pool.
+- **Dev backdoor.** When `NODE_ENV !== 'production'`, the JWT guard accepts
+  HS256 tokens signed with `DEV_JWT_SECRET`. Used by local tooling and the
+  e2e harness; gated off in production.
 
 ## 2. Tenants & users
 
@@ -123,11 +140,12 @@ Idempotency-Key: 9c85...-pos-00042
   "session_id": "5a0f...",
   "warehouse_id": "c1ab...",
   "customer_id": null,
-  "currency": "GHS",
-  "payment": { "method": "mobile_money", "reference": "MTN-123" },
+  "currency": "USD",
+  "tax_applied": true,
+  "payment": { "method": "card", "reference": "stripe_pi_3..." },
   "items": [
-    { "product_id": "b7...", "quantity": 2, "unit_price": 45.00, "tax_pct": 5 },
-    { "product_id": "f3...", "quantity": 1, "unit_price": 80.00, "tax_pct": 5 }
+    { "product_id": "b7...", "quantity": 2, "unit_price": 45.00, "tax_pct": 6.5 },
+    { "product_id": "f3...", "quantity": 1, "unit_price": 80.00, "tax_pct": 6.5 }
   ],
   "discount_total": 5.00
 }

@@ -43,13 +43,19 @@ CREATE TABLE tenants (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name            TEXT NOT NULL,
   slug            CITEXT NOT NULL UNIQUE,
-  base_currency   CHAR(3) NOT NULL DEFAULT 'GHS',
-  timezone        TEXT NOT NULL DEFAULT 'Africa/Accra',
+  base_currency   CHAR(3) NOT NULL DEFAULT 'USD',
+  timezone        TEXT NOT NULL DEFAULT 'America/New_York',
   plan            TEXT NOT NULL DEFAULT 'standard',
   is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+  -- added in 0008_warehouse_clerk_and_tax.sql for US sales-tax rollout
+  default_tax_rate_pct NUMERIC(5,2) NOT NULL DEFAULT 0,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Note: 0007_locale_us.sql flipped the historical defaults from
+-- 'GHS' / 'Africa/Accra' to 'USD' / 'America/New_York' when the tenant was
+-- switched to US-only operations. The shape above reflects the current state.
 
 CREATE TABLE users (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -60,9 +66,18 @@ CREATE TABLE users (
   phone           TEXT,
   is_active       BOOLEAN NOT NULL DEFAULT TRUE,
   last_login_at   TIMESTAMPTZ,
+  -- added in 0010_user_passwords.sql (Phase A — real password auth):
+  password_hash         TEXT,
+  must_change_password  BOOLEAN NOT NULL DEFAULT FALSE,
+  failed_login_count    INTEGER NOT NULL DEFAULT 0,
+  locked_until          TIMESTAMPTZ,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(tenant_id, email)
 );
+-- Passwords are stored as argon2id hashes; the auth service implements a
+-- 5-strike lockout (`failed_login_count` + `locked_until`). When an admin
+-- sets/resets a password, `must_change_password = TRUE` forces the user to
+-- the /change-password screen on next sign-in.
 
 CREATE TABLE roles (
   id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -95,7 +110,7 @@ CREATE TABLE customers (
   shipping_address JSONB,
   tax_id           TEXT,
   credit_limit     NUMERIC(14,2) NOT NULL DEFAULT 0,
-  currency         CHAR(3) NOT NULL DEFAULT 'GHS',
+  currency         CHAR(3) NOT NULL DEFAULT 'USD',
   loyalty_points   INTEGER NOT NULL DEFAULT 0,
   is_active        BOOLEAN NOT NULL DEFAULT TRUE,
   qbo_customer_id  TEXT,
@@ -113,7 +128,7 @@ CREATE TABLE suppliers (
   phone            TEXT,
   address          JSONB,
   payment_terms_days INTEGER NOT NULL DEFAULT 30,
-  currency         CHAR(3) NOT NULL DEFAULT 'GHS',
+  currency         CHAR(3) NOT NULL DEFAULT 'USD',
   rating           NUMERIC(3,2),                 -- 0.00 - 5.00
   is_active        BOOLEAN NOT NULL DEFAULT TRUE,
   qbo_vendor_id    TEXT,
@@ -139,7 +154,7 @@ CREATE TABLE products (
   tax_rate_pct    NUMERIC(5,2) NOT NULL DEFAULT 0,
   cost_price      NUMERIC(14,4) NOT NULL DEFAULT 0,
   base_price      NUMERIC(14,4) NOT NULL DEFAULT 0,
-  currency        CHAR(3) NOT NULL DEFAULT 'GHS',
+  currency        CHAR(3) NOT NULL DEFAULT 'USD',
   weight_grams    INTEGER,
   is_active       BOOLEAN NOT NULL DEFAULT TRUE,
   qbo_item_id     TEXT,
@@ -155,7 +170,7 @@ CREATE TABLE price_tiers (
   segment       customer_segment NOT NULL,
   min_quantity  INTEGER NOT NULL DEFAULT 1,
   unit_price    NUMERIC(14,4) NOT NULL,
-  currency      CHAR(3) NOT NULL DEFAULT 'GHS'
+  currency      CHAR(3) NOT NULL DEFAULT 'USD'
 );
 ```
 
@@ -170,6 +185,11 @@ CREATE TABLE warehouses (
   type         TEXT NOT NULL DEFAULT 'dc',    -- factory, dc, outlet
   address      JSONB,
   is_active    BOOLEAN NOT NULL DEFAULT TRUE,
+  -- added in 0008_warehouse_clerk_and_tax.sql so POS sales can email the
+  -- on-duty clerk a copy of the receipt:
+  clerk_name   TEXT,
+  clerk_email  CITEXT,
+  clerk_phone  TEXT,
   UNIQUE(tenant_id, code)
 );
 
@@ -232,11 +252,15 @@ CREATE TABLE sales_orders (
   warehouse_id   UUID NOT NULL REFERENCES warehouses(id),
   channel        TEXT NOT NULL DEFAULT 'b2c',   -- b2c, b2b, pos, online
   status         order_status NOT NULL DEFAULT 'draft',
-  currency       CHAR(3) NOT NULL DEFAULT 'GHS',
+  currency       CHAR(3) NOT NULL DEFAULT 'USD',
   fx_rate        NUMERIC(14,6) NOT NULL DEFAULT 1,
   subtotal       NUMERIC(14,2) NOT NULL DEFAULT 0,
   discount_total NUMERIC(14,2) NOT NULL DEFAULT 0,
   tax_total      NUMERIC(14,2) NOT NULL DEFAULT 0,
+  -- added in 0008_warehouse_clerk_and_tax.sql to make tax a per-sale toggle
+  -- (POS can ring up tax-exempt sales without changing tenant defaults):
+  tax_applied    BOOLEAN NOT NULL DEFAULT TRUE,
+  tax_rate_pct   NUMERIC(5,2) NOT NULL DEFAULT 0,
   total          NUMERIC(14,2) NOT NULL DEFAULT 0,
   notes          TEXT,
   created_by     UUID REFERENCES users(id),
@@ -404,7 +428,7 @@ CREATE TABLE employees (
   department    TEXT,
   position      TEXT,
   base_salary   NUMERIC(14,2) NOT NULL,
-  currency      CHAR(3) NOT NULL DEFAULT 'GHS',
+  currency      CHAR(3) NOT NULL DEFAULT 'USD',
   hired_on      DATE NOT NULL,
   terminated_on DATE,
   bank_details  JSONB,
@@ -461,6 +485,24 @@ CREATE TABLE notifications (
   sent_at      TIMESTAMPTZ,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- added in 0008_warehouse_clerk_and_tax.sql — dedupe outbound notifications
+-- (e.g., the POS sale → clerk email side-effect is keyed here so a retried
+-- POST does not send a second email):
+CREATE TABLE notification_log (
+  id            BIGSERIAL PRIMARY KEY,
+  tenant_id     UUID NOT NULL,
+  dedupe_key    TEXT NOT NULL,
+  channel       TEXT NOT NULL,
+  recipient     TEXT NOT NULL,
+  topic         TEXT NOT NULL,
+  payload       JSONB,
+  status        TEXT NOT NULL,        -- queued, sent, failed
+  error         TEXT,
+  sent_at       TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(tenant_id, dedupe_key)
+);
 ```
 
 ## 3. Indexing & performance notes
@@ -481,4 +523,14 @@ CREATE POLICY tenant_isolation ON invoices
   USING (tenant_id = current_setting('app.tenant_id', true)::uuid);
 ```
 
-The API sets `SET LOCAL app.tenant_id = '<uuid>'` at transaction start.
+The API sets the per-request tenant via
+`SELECT set_config('app.tenant_id', '<uuid>', true)` (the `true` flag scopes
+the setting to the surrounding transaction). This replaced the original
+`SET LOCAL` approach in commit `8abc42f` because Kysely's pooled connections
+did not always run inside an explicit transaction, causing the setting to
+leak between requests.
+
+Migration `0009_relax_force_rls.sql` removed `FORCE ROW LEVEL SECURITY` from
+the tenant-scoped tables so admin / non-tenant-scoped reads (user provisioning,
+health checks) work without a tenant context. RLS is still active for ordinary
+authenticated reads.

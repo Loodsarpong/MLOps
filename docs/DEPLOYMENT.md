@@ -66,6 +66,17 @@ push to main ─▶ Deploy
   └─ smoke test `curl https://api.../health`
 ```
 
+> **Apple Silicon gotcha.** If you ever build the API image on an M-series
+> Mac and push it directly (skipping CI), use
+> `docker buildx build --platform linux/amd64 ...`. Fargate runs amd64 by
+> default and will refuse to start an arm64-only image. The GitHub Actions
+> runner is already amd64, so the workflow above is unaffected.
+
+> **Status check.** As of this writing the deploy workflow references a
+> placeholder AWS account ID (`123456789012`) and several `secrets.*` that
+> are not yet provisioned. Treat the pipeline as an outline that needs the
+> first end-to-end run before it can be relied on.
+
 OIDC is used for AWS auth (no long-lived keys in GitHub). Role:
 `arn:aws:iam::<acct>:role/GitHubActionsDeploy`.
 

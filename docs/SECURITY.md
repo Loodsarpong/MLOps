@@ -2,6 +2,25 @@
 
 ## 1. Authentication
 
+The system supports three auth modes; the JWT guard at
+`apps/api/src/common/auth/jwt.guard.ts` decides which based on `NODE_ENV`
+and the token format.
+
+### 1.1 Local password auth (Phase A — current default)
+
+- Passwords stored as **argon2id** hashes in `users.password_hash` (added by
+  migration `0010_user_passwords.sql`).
+- **Lockout:** 5 failed attempts → 15-minute lockout, tracked via
+  `failed_login_count` and `locked_until` on the users table.
+- **Forced rotation:** `must_change_password = TRUE` (set by admins when
+  issuing or resetting a password) routes the user to `/change-password`
+  before the dashboard.
+- Issued JWT is signed locally; the web app stores it in a `ns_auth`
+  cookie that the Next.js `middleware.ts` checks before allowing access to
+  the `(app)` route group.
+
+### 1.2 Cognito JWT (target state)
+
 - **Provider:** AWS Cognito user pool (one per environment).
 - **Tokens:** OAuth 2.0 / OIDC; access token (JWT, 1 h) + refresh token (30 d).
 - MFA (TOTP) required for `admin` and `accountant` roles.
@@ -11,11 +30,30 @@
   { "sub":"c0a...", "custom:tenant_id":"9e5f...", "custom:roles":"admin,accountant" }
   ```
 
-- NestJS `JwtAuthGuard` validates the token against Cognito JWKS
+- The guard would validate the token against Cognito JWKS
   (`https://cognito-idp.<region>.amazonaws.com/<pool>/.well-known/jwks.json`)
-  with caching; then sets `req.user = { id, tenantId, roles }`.
-- Database connections run `SET LOCAL app.tenant_id = '<uuid>'` so Postgres RLS
-  policies enforce tenant isolation defense-in-depth.
+  with caching, then set `req.user = { id, tenantId, roles }`. The plumbing
+  exists (`jwks-rsa` is a dependency) but has not been exercised against a
+  real user pool yet.
+
+### 1.3 Dev backdoor
+
+- When `NODE_ENV !== 'production'`, the guard accepts HS256-signed JWTs
+  using `DEV_JWT_SECRET`.
+- Used by the local `make admin-password` flow, e2e tooling, and the seed
+  data so that contributors can hit the API without a Cognito pool.
+- **Guard before any prod cutover:** verify that `NODE_ENV` is `production`
+  and that `DEV_JWT_SECRET` is unset (or rotated) in deployed environments.
+
+### 1.4 Tenant isolation (defense-in-depth)
+
+- The API runs `SELECT set_config('app.tenant_id', '<uuid>', true)` per
+  request so Postgres RLS filters every tenant-scoped query.
+- See `apps/api/src/common/tenancy/`. Any query path that bypasses the
+  shared `Db` provider misses this — treat that as a bug.
+- Migration `0009_relax_force_rls.sql` removed `FORCE` from RLS so admin /
+  non-tenant-scoped paths work without setting a tenant. Do not re-add
+  `FORCE` without revisiting the consumers.
 
 ## 2. Authorization (RBAC)
 

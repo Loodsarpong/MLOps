@@ -1,8 +1,16 @@
 # Frontend Structure
 
-Next.js 14 App Router, TypeScript, Tailwind + shadcn/ui, PWA via `next-pwa`.
+Next.js 14 App Router, TypeScript, Tailwind, PWA via `next-pwa`.
 State management: TanStack Query (server state) + Zustand (client/UI state).
-Forms: React Hook Form + Zod. Charts: Recharts.
+Forms: React Hook Form + Zod. Charts: Recharts. Toasts: `sonner`.
+
+> **Aspirational vs. shipped.** This document describes the target frontend
+> shape. The screens that are actually wired up today are: `(auth)/login`,
+> `(auth)/change-password`, `(app)/dashboard`, `(app)/pos`, `(app)/products`,
+> `(app)/customers`, `(app)/inventory/stock`, `(app)/reports/sales`,
+> `(app)/settings/users`, `(app)/settings/warehouses`. The rest of the
+> routes referenced below are placeholders (the in-app 404 / "soon" page
+> handles unbuilt routes — see commit `4e9b6c3`).
 
 ## 1. App layout
 
@@ -16,7 +24,11 @@ apps/web/
 │   ├── app/              # Next.js App Router
 │   │   ├── (auth)/
 │   │   │   ├── login/page.tsx
-│   │   │   └── forgot-password/page.tsx
+│   │   │   └── change-password/page.tsx   # forced after admin-set or self-service password change
+                                            # (Phase A introduced this in lieu of an end-user
+                                            # forgot-password flow — admins reset via
+                                            # `make admin-password EMAIL=… PASSWORD=…`,
+                                            # which sets must_change_password = TRUE)
 │   │   ├── (app)/        # Authenticated shell
 │   │   │   ├── layout.tsx            # Sidebar + topbar
 │   │   │   ├── dashboard/page.tsx    # Role-based dashboard
@@ -109,8 +121,15 @@ apps/web/
 - **Background-sync** queue for POS sales and stock adjustments when offline.
 
 The POS page detects `navigator.onLine` and displays an `OfflineBanner`. The
-Zustand `offlineQueue` persists to IndexedDB; on reconnect, entries are POSTed
-with their original `Idempotency-Key`.
+offline queue persists to IndexedDB via `idb-keyval`. The
+`useOfflineSync()` hook (`apps/web/src/lib/useOfflineSync.ts`) listens for
+`window.online` events and **auto-flushes** queued sales on reconnect (commit
+`504f3e2`); each entry is POSTed with its original `Idempotency-Key` so the
+server dedupes if the cashier retried manually first.
+
+UI feedback throughout the app uses `sonner` toasts (success / error /
+loading) — `apps/web/src/app/layout.tsx` mounts the global `<Toaster />`,
+and module pages call `toast.success(...)` / `toast.error(...)` directly.
 
 ## 4. Barcode scanning
 

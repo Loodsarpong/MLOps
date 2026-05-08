@@ -97,9 +97,16 @@
 - **Single schema, row-level isolation.** Every tenant-owned table includes
   `tenant_id UUID NOT NULL`.
 - Postgres **Row Level Security (RLS)** enforces isolation with a policy
-  `USING (tenant_id = current_setting('app.tenant_id')::uuid)`.
-- The API middleware reads `tenant_id` from the JWT and sets it per request:
-  `SET LOCAL app.tenant_id = '...'`.
+  `USING (tenant_id = current_setting('app.tenant_id', true)::uuid)`.
+- The API middleware reads `tenant_id` from the JWT and sets it per request
+  via `SELECT set_config('app.tenant_id', '<uuid>', true)` — the `true` flag
+  scopes the setting to the surrounding transaction. (The codebase moved
+  away from `SET LOCAL` in commit `8abc42f` because Kysely's pooled
+  connections did not always run in an explicit transaction.)
+- Migration `0009_relax_force_rls.sql` removes `FORCE ROW LEVEL SECURITY` so
+  that admin / non-tenant-scoped reads (e.g., user provisioning paths) work
+  without a tenant context. RLS is still active for ordinary authenticated
+  reads. Do not re-add `FORCE` without revisiting the consumers.
 - Future path to per-tenant schemas or databases is reserved but not required
   for NaturalShea's scale.
 
@@ -108,7 +115,9 @@
 ```
 apps/api/src/
 ├── modules/
-│   ├── auth/          # Cognito JWT verification, RBAC guards
+│   ├── auth/          # JWT verification (Cognito JWKS in prod, HS256
+│   │                  #   `DEV_JWT_SECRET` backdoor when NODE_ENV !== 'production'),
+│   │                  #   argon2id password hashing, RBAC guards
 │   ├── tenants/       # Tenant CRUD, subscription plan, feature flags
 │   ├── users/         # Internal users, roles, invitations
 │   ├── customers/     # CRM-lite, segments, loyalty
