@@ -32,7 +32,7 @@ For a deep dive on current state, what is shipped, and what is pending, read
 | Frontend libs| TanStack Query, Zustand, react-hook-form, sonner, recharts, idb-keyval |
 | Database     | PostgreSQL 15 with row-level security                             |
 | Cache / Queue| Redis 7 (BullMQ planned)                                          |
-| Auth         | Argon2 passwords + JWT; AWS Cognito (target state); dev backdoor (local) |
+| Auth         | Argon2id passwords + locally-issued JWT (production path, Phase A). HS256 dev backdoor gated by `NODE_ENV !== 'production'`. Cognito plumbing stays in code but is *not* on the roadmap. |
 | Object store | S3 in prod, MinIO locally                                         |
 | Migrations   | `node-pg-migrate` against `db/migrations/*.sql`                   |
 | Tests        | `vitest` per package                                              |

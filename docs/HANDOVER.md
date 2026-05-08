@@ -149,6 +149,7 @@ Run `make help` for the full target list. Useful ones:
 | Understand the data model          | `docs/DATABASE_SCHEMA.md` + `db/migrations/*.sql` (10 of them)  |
 | Understand the API surface         | `docs/API.md` + `apps/api/src/modules/*/`                       |
 | Understand the frontend            | `docs/FRONTEND.md` + `apps/web/src/app/`                        |
+| Build the next thing (Phase C)     | `docs/PHASE_C_INVOICING.md`                                     |
 | Understand QuickBooks plans        | `docs/QUICKBOOKS_INTEGRATION.md`                                |
 | Bulk-load data                     | `docs/CSV_IMPORT.md` + `templates/csv/`                         |
 | Deploy to AWS                      | `docs/DEPLOYMENT.md` + `infra/terraform/`                       |
@@ -206,26 +207,47 @@ Run `make help` for the full target list. Useful ones:
 
 ---
 
-## 7. Open questions for the incoming owner
+## 7. Decisions log + remaining open questions
 
-Decide these before pushing further:
+### 7a. Decisions locked in (2026-05-08)
 
-1. **Single-tenant or multi-tenant in prod?** RLS infrastructure exists; the
-   business currently runs one tenant (NaturalShea / Brendamour). Decide whether
-   to keep multi-tenancy as a future option or simplify.
-2. **QuickBooks integration scope.** The OAuth handshake is wired. Decide:
-   (a) which entities sync (customers, invoices, payments, items?), (b) one-way
-   or two-way, (c) push or pull (we currently have an SQS queue env var for it).
-3. **Auth target.** Stay on dev backdoor + a local password table forever,
-   move to Cognito, or use a third option (e.g., Auth0)? README and `.env.example`
-   assume Cognito; nothing actually verifies a Cognito JWKS today.
-4. **Phase C scope.** Phase A = auth, Phase B = catalog CRUD. The next
-   natural Phase C is one of: suppliers + procurement, invoicing UI, or
-   QuickBooks sync. Pick one and ship it before broadening.
-5. **Multi-currency.** Drop entirely (US-only) or keep the schema and add UI
-   when expanding into West Africa / EU?
-6. **Batch & expiry surfacing.** The data model tracks lots; do clerks need
-   an expiry-soon dashboard? Cosmetic regulation may force this question.
+These were left open in earlier drafts; they are now settled. Treat them as
+the canonical product direction.
+
+1. **Auth target → local password auth (Phase A).** The argon2id password
+   path shipped in commit `f0505e5` is the production auth mechanism. AWS
+   Cognito is *not* coming next; the JWKS path in code remains as a future
+   option but is not on the roadmap. The dev HS256 backdoor stays — gated
+   by `NODE_ENV !== 'production'` and `DEV_JWT_SECRET` — for local dev and
+   the e2e harness only. Before any prod cutover, the prod task definition
+   must have `NODE_ENV=production` and **must not** set `DEV_JWT_SECRET`.
+2. **Multi-currency → keep schema dormant.** The `currency` columns and
+   USD defaults stay; no `fx_rates` table, no nightly fetcher, no currency
+   selector UI. The system runs USD-only in practice (per migration
+   `0007_locale_us.sql`) but the schema remains future-proofed if NaturalShea
+   ever expands back into West Africa or the EU.
+3. **Phase C → Invoicing UI.** The next ship target is a complete
+   invoicing experience: list / detail / create / record payment / send by
+   email / download PDF / void. Picked because the data model and PDF
+   plumbing already exist; this is the highest "unbuilt → shipped"
+   conversion ratio for the least new code. Detailed plan in
+   [`PHASE_C_INVOICING.md`](PHASE_C_INVOICING.md).
+
+### 7b. Still open
+
+Decide these before they block work:
+
+1. **Single-tenant or multi-tenant in prod?** RLS infrastructure exists;
+   the business currently runs one tenant (NaturalShea / Brendamour).
+   Decide whether to keep multi-tenancy as a future option or simplify
+   the codebase down to one tenant.
+2. **QuickBooks integration scope.** The OAuth handshake is wired.
+   Decide: (a) which entities sync (customers, invoices, payments, items?),
+   (b) one-way or two-way, (c) push or pull (we currently have an SQS queue
+   env var for it). Picked up *after* Phase C ships.
+3. **Batch & expiry surfacing.** The data model tracks lots; do clerks
+   need an expiry-soon dashboard? Cosmetic regulation may force this
+   question.
 
 ---
 
@@ -236,8 +258,8 @@ Decide these before pushing further:
 | 1   | Run the stack locally; click through every screen; read `ARCHITECTURE.md`   |
 | 2   | Read every migration top-to-bottom; sketch the ER diagram from memory       |
 | 3   | Walk the API module-by-module from `app.module.ts`; trace one POS sale end-to-end |
-| 4   | Audit `docs/*.md` against the code and fix drift (see §5 caveat)             |
-| 5   | Pick a Phase C scope (§7.4) and write a one-page plan before coding          |
+| 4   | Read `PHASE_C_INVOICING.md`; trace the existing invoicing service + PDF generator |
+| 5   | Start Phase C (invoicing UI) — see the day-by-day breakdown in `PHASE_C_INVOICING.md` |
 
 ---
 
