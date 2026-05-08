@@ -11,9 +11,16 @@ const withPWA = require('next-pwa')({
       options: { cacheName: 'next-static', expiration: { maxAgeSeconds: 86400 * 30 } },
     },
     {
-      urlPattern: /^https?.*\/api\/.*GET$/,
+      // Match any cross-origin call into the NestJS API surface (path is /v1/*).
+      urlPattern: /\/v1\/.*/,
       handler: 'NetworkFirst',
-      options: { cacheName: 'api-get', networkTimeoutSeconds: 4 },
+      method: 'GET',
+      options: {
+        cacheName: 'api-get',
+        networkTimeoutSeconds: 4,
+        expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 },
+        cacheableResponse: { statuses: [0, 200] },
+      },
     },
   ],
 });
