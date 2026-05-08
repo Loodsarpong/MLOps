@@ -6,6 +6,7 @@ import { Roles } from '../../common/auth/roles.decorator';
 import { TenantInterceptor } from '../../common/tenancy/tenant.interceptor';
 import { IdempotencyInterceptor } from '../../common/idempotency/idempotency.interceptor';
 import { InvoicingService } from './invoicing.service';
+import { CreateInvoiceSchema } from './invoicing.dto';
 
 @ApiTags('invoicing')
 @ApiBearerAuth()
@@ -35,6 +36,12 @@ export class InvoicingController {
   @Roles('admin', 'accountant', 'sales_rep')
   get(@Param('id') id: string) {
     return this.svc.get(id);
+  }
+
+  @Post()
+  @Roles('admin', 'accountant', 'sales_rep')
+  create(@Body() body: unknown) {
+    return this.svc.create(CreateInvoiceSchema.parse(body));
   }
 
   @Post(':id/payments')
