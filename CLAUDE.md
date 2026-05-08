@@ -1,320 +1,289 @@
-# CLAUDE.md — MLOps Repository Guide
+# CLAUDE.md — NaturalShea Care ERP
 
-This file provides context for AI assistants (Claude and others) working in this repository.
-Update this file as the project evolves.
+Context for AI assistants working in this repository. Update this file as the
+project evolves.
 
----
-
-## Project Overview
-
-**Repository:** Loodsarpong/MLOps
-**Purpose:** MLOps (Machine Learning Operations) project — pipelines, model training, serving, monitoring, and infrastructure automation.
-
-> Update this section with a concrete description once the project scope is defined.
+> **Repo name vs. project.** The GitHub remote is `Loodsarpong/MLOps` for
+> historical reasons. The actual project is the **NaturalShea Care ERP** —
+> a multi-tenant TypeScript monorepo. There is no ML / MLOps code here.
 
 ---
 
-## Repository Structure
+## Project overview
+
+Production-track ERP for NaturalShea Care, a US-based shea-product
+manufacturer / distributor (Brendamour DC, Blue Ash). Covers product catalog,
+multi-warehouse inventory with FIFO batch tracking, in-store POS (offline-
+capable PWA), customers, suppliers, invoicing, procurement, and a planned
+QuickBooks Online sync.
+
+For a deep dive on current state, what is shipped, and what is pending, read
+[`docs/HANDOVER.md`](docs/HANDOVER.md) first.
+
+---
+
+## Tech stack
+
+| Layer        | Choice                                                            |
+| ------------ | ----------------------------------------------------------------- |
+| Runtime      | Node 20, pnpm 9, TypeScript 5                                     |
+| Backend      | NestJS 10 (REST), Kysely + `pg` for SQL, Zod for validation       |
+| Frontend     | Next.js 14 (App Router), React 18, Tailwind, `next-pwa`           |
+| Frontend libs| TanStack Query, Zustand, react-hook-form, sonner, recharts, idb-keyval |
+| Database     | PostgreSQL 15 with row-level security                             |
+| Cache / Queue| Redis 7 (BullMQ planned)                                          |
+| Auth         | Argon2 passwords + JWT; AWS Cognito (target state); dev backdoor (local) |
+| Object store | S3 in prod, MinIO locally                                         |
+| Migrations   | `node-pg-migrate` against `db/migrations/*.sql`                   |
+| Tests        | `vitest` per package                                              |
+| Lint         | `eslint` per package                                              |
+| CI/CD        | GitHub Actions (`.github/workflows/{ci,deploy,security}.yml`)     |
+| Infra        | Terraform under `infra/terraform/` (modules: network, rds, redis, ecs_service, s3_bucket, cloudfront, cognito) |
+| Container    | Docker Compose locally; ECS Fargate target                        |
+
+---
+
+## Repository structure
 
 ```
-MLOps/
-├── CLAUDE.md               # This file
-├── README.md               # Human-facing documentation (add when ready)
-├── .github/
-│   └── workflows/          # CI/CD pipeline definitions
-├── data/
-│   ├── raw/                # Immutable raw data (never modify)
-│   ├── processed/          # Cleaned/transformed data
-│   └── external/           # Third-party data sources
-├── models/                 # Trained model artifacts and configs
-├── notebooks/              # Exploratory Jupyter notebooks (not production code)
-├── src/
-│   ├── data/               # Data ingestion and preprocessing
-│   ├── features/           # Feature engineering
-│   ├── models/             # Model training, evaluation, prediction
-│   ├── pipelines/          # End-to-end ML pipeline orchestration
-│   ├── serving/            # Model serving / inference API
-│   └── monitoring/         # Data drift, model performance monitoring
-├── tests/
-│   ├── unit/               # Unit tests
-│   ├── integration/        # Integration tests
-│   └── fixtures/           # Shared test data and mocks
-├── configs/                # Experiment and pipeline configuration files (YAML)
-├── scripts/                # One-off utility scripts (not production)
-├── docker/                 # Dockerfiles and compose files
-├── infra/                  # Infrastructure-as-code (Terraform, Helm, etc.)
-├── requirements.txt        # Python runtime dependencies
-├── requirements-dev.txt    # Development-only dependencies
-├── pyproject.toml          # Python project metadata and tool config
-├── Makefile                # Convenience commands
-└── .env.example            # Environment variable template (never commit .env)
+naturalshea-erp/                    # repo root (folder is named MLOps locally)
+├── CLAUDE.md                       # this file
+├── README.md                       # human-facing overview + quick start
+├── Makefile                        # dev convenience targets (`make help`)
+├── pnpm-workspace.yaml             # workspace = apps/* + packages/*
+├── apps/
+│   ├── api/                        # NestJS backend
+│   │   └── src/
+│   │       ├── main.ts             # bootstrap (helmet, CORS, validation)
+│   │       ├── app.module.ts       # canonical module list
+│   │       ├── health.controller.ts
+│   │       ├── common/             # auth, tenancy (RLS), audit, http, idempotency
+│   │       ├── config/
+│   │       ├── db/                 # Kysely + pg setup; tenant-scoped queries
+│   │       ├── modules/            # 19 feature modules (auth, products, pos, ...)
+│   │       ├── scripts/            # one-off scripts (e.g. set-password)
+│   │       └── workers/            # SQS / queue workers
+│   └── web/                        # Next.js 14 PWA
+│       └── src/
+│           ├── app/(app)/          # authed app: dashboard, pos, products, ...
+│           ├── app/(auth)/         # login, change-password
+│           ├── components/layout/
+│           ├── lib/                # api client, auth, offline sync hooks
+│           ├── stores/             # zustand stores (cart, ...)
+│           └── middleware.ts       # auth-cookie gate
+├── packages/
+│   └── shared/                     # shared types, DTOs, zod schemas
+├── db/
+│   ├── migrations/                 # numbered SQL (0001…0010 currently)
+│   └── seeds/                      # 01_roles, 02_demo_tenant, 03_demo_inventory
+├── infra/
+│   ├── docker/                     # docker-compose + api/web Dockerfiles
+│   └── terraform/                  # AWS modules + dev/staging/prod tfvars
+├── templates/csv/                  # CSV import templates
+├── docs/                           # architecture, schema, api, deploy, runbook, …
+├── scripts/                        # dev-setup.sh, create-tenant.ts
+└── .github/workflows/              # ci.yml, deploy.yml, security.yml
 ```
-
-> Update this tree to reflect the actual directory layout as files are added.
 
 ---
 
-## Development Environment
+## Development environment
 
 ### Prerequisites
 
-- Python 3.10+ (check `.python-version` or `pyproject.toml` for the pinned version)
-- `pip` / `uv` / `poetry` (whichever package manager is configured)
-- Docker & Docker Compose (for containerized services)
-- `make` (for Makefile commands)
+- Node 20
+- pnpm 9
+- Docker Desktop (or compatible Docker Engine)
+- `make`
 
 ### Setup
 
 ```bash
-# Clone the repo
-git clone <remote-url>
-cd MLOps
-
-# Create and activate a virtual environment
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-
-# Copy environment config and fill in values
-cp .env.example .env
+make setup        # prereq check + .env from .env.example + start docker compose
+make install      # pnpm install --frozen-lockfile
+make db           # migrate + seed + bootstrap demo admin password
+make api          # NestJS dev (http://localhost:4000)  — run in its own terminal
+make web          # Next.js dev (http://localhost:3000) — run in its own terminal
 ```
 
-> Replace these steps with the actual setup commands once they are established.
+Sign in (local dev only):
+
+- Email: `lsarpong@naturalsheacare.com`
+- Password: `dev-password`
 
 ---
 
-## Common Commands (Makefile)
+## Common commands (Makefile)
 
-| Command             | Description                              |
-|---------------------|------------------------------------------|
-| `make install`      | Install all dependencies                 |
-| `make test`         | Run the full test suite                  |
-| `make lint`         | Run linters (ruff, mypy, etc.)           |
-| `make format`       | Auto-format code                         |
-| `make train`        | Run a training pipeline                  |
-| `make serve`        | Start the model serving API locally      |
-| `make docker-build` | Build Docker images                      |
-| `make ci`           | Run everything CI would run              |
+`make help` is the source of truth. Highlights:
 
-> Populate the Makefile and update this table as commands are defined.
+| Command                                       | Description                                         |
+| --------------------------------------------- | --------------------------------------------------- |
+| `make setup`                                  | First-time bootstrap (prereqs, `.env`, docker up)   |
+| `make install`                                | `pnpm install --frozen-lockfile`                    |
+| `make db`                                     | `migrate` + `seed` + bootstrap demo admin password  |
+| `make migrate`                                | Apply DB migrations (loads `.env`)                  |
+| `make seed`                                   | Run seed SQL via the Postgres container             |
+| `make api` / `make web` / `make worker`       | Run each service in dev mode                        |
+| `make down`                                   | Stop docker services (keeps volumes)                |
+| `make reset`                                  | DESTRUCTIVE: wipe DB volume, restart, re-migrate, re-seed |
+| `make test`                                   | `pnpm -r test` (vitest)                             |
+| `make lint`                                   | `pnpm -r lint`                                      |
+| `make logs`                                   | Tail docker compose logs                            |
+| `make admin-password EMAIL=… PASSWORD=…`      | Set/reset a user password (uses `ts-node`)          |
 
 ---
 
-## Code Conventions
+## Code conventions
 
-### Python Style
+### TypeScript
 
-- **Formatter:** `ruff format` (or `black` if configured differently — check `pyproject.toml`)
-- **Linter:** `ruff` with strict settings
-- **Type checking:** `mypy` with strict mode enabled
-- **Docstrings:** Google-style docstrings for all public functions and classes
-- **Line length:** 88 characters (black/ruff default)
+- Per-package `tsconfig.json` extending `tsconfig.base.json`.
+- Strict-ish; some `apps/api` strictness has been intentionally loosened —
+  tighten as you touch modules, do not loosen further.
+- Imports: stdlib → third-party → local; let eslint sort.
 
-```toml
-# Example pyproject.toml snippet
-[tool.ruff]
-line-length = 88
-select = ["E", "F", "I", "N", "UP", "ANN"]
+### Linting & formatting
 
-[tool.mypy]
-strict = true
-```
-
-### Imports
-
-Order imports: standard library → third-party → local. Use `ruff` to enforce this automatically.
+- `eslint` per package (`apps/api/.eslintrc.cjs`, `apps/web/.eslintrc.json`).
+- No project-wide formatter is enforced; match surrounding style.
 
 ### Naming
 
-| Construct          | Convention          | Example                   |
-|--------------------|---------------------|---------------------------|
-| Files/modules      | `snake_case`        | `train_model.py`          |
-| Classes            | `PascalCase`        | `FeaturePipeline`         |
-| Functions/vars     | `snake_case`        | `load_dataset()`          |
-| Constants          | `UPPER_SNAKE_CASE`  | `MAX_EPOCHS = 100`        |
-| Config keys (YAML) | `snake_case`        | `learning_rate: 0.001`    |
+| Construct          | Convention          | Example                |
+| ------------------ | ------------------- | ---------------------- |
+| Files / modules    | `kebab-case` or `dot.case` per Nest convention | `products.service.ts`, `set-password.ts` |
+| Classes            | `PascalCase`        | `ProductsController`   |
+| Functions / vars   | `camelCase`         | `findActiveTenant()`   |
+| Constants          | `UPPER_SNAKE_CASE`  | `MAX_BATCH_SIZE`       |
+| DB columns         | `snake_case`        | `tenant_id`            |
 
-### Notebooks
+### Database
 
-- Notebooks live in `notebooks/` and are for **exploration only** — not production code.
-- Clear all cell outputs before committing (`jupyter nbconvert --clear-output`).
-- Production-ready logic must be refactored into `src/`.
+- Migrations are numbered SQL in `db/migrations/`. **Never edit a merged
+  migration; add a new one.**
+- All tenant-scoped tables use Postgres RLS. Tenant context is injected per
+  request via `set_config('app.tenant_id', ...)` — see
+  `apps/api/src/common/tenancy/`. Any new query path must go through the
+  shared `Db` provider so RLS is set; otherwise it will silently filter to
+  nothing.
+- Migration `0009_relax_force_rls.sql` removes `FORCE` from RLS so admin
+  reads work without a tenant. Do not re-add `FORCE` without revisiting the
+  consumers.
 
 ---
 
 ## Testing
 
-### Running Tests
-
 ```bash
-# All tests
-pytest
-
-# Unit tests only
-pytest tests/unit/
-
-# With coverage
-pytest --cov=src --cov-report=term-missing
-
-# Single test file
-pytest tests/unit/test_features.py -v
+pnpm -r test                                    # all packages
+pnpm --filter @ns/api test                      # API unit tests
+pnpm --filter @ns/web test                      # Web unit tests
+pnpm --filter @ns/api exec vitest run path/x    # single file
 ```
 
-### Testing Conventions
-
-- Every module in `src/` should have a corresponding test file in `tests/unit/`.
-- Use `pytest` fixtures for shared setup; avoid test interdependency.
-- Mock external services (databases, cloud APIs) in unit tests.
-- Integration tests may use real infrastructure but must be idempotent and isolated.
-- Minimum acceptable coverage: **80%** (enforced in CI).
+- Vitest with `--passWithNoTests` is allowed today (some modules have no
+  suite yet). When you add a module, add at least a smoke test.
+- Mock external services (SES, Twilio, QBO, S3) in unit tests.
+- E2E target (`test:e2e`) exists in `apps/api/package.json` but has no real
+  suite.
 
 ---
 
-## ML Pipeline Conventions
-
-### Experiment Tracking
-
-- Use **MLflow** (or the configured tracker — update if different) for logging metrics, params, and artifacts.
-- Every training run must log: hyperparameters, evaluation metrics, and the model artifact.
-- Tag runs with `git_commit`, `dataset_version`, and `run_name`.
-
-### Configuration
-
-- All pipeline hyperparameters and settings live in `configs/*.yaml`.
-- Use **Hydra** or **OmegaConf** for config composition (update if a different library is used).
-- Never hard-code magic numbers in source code — reference config values.
-
-### Data Versioning
-
-- Use **DVC** (or the configured tool) to version datasets and model artifacts.
-- Raw data in `data/raw/` is immutable — never overwrite it.
-- All data transformations must be reproducible given the same input and config.
-
-### Model Registry
-
-- Promote models through stages: `Staging → Production → Archived`.
-- A model must pass evaluation thresholds before promotion to `Production`.
-- Document the champion model's metrics and training config in `models/README.md`.
-
----
-
-## Git Workflow
+## Git workflow
 
 ### Branching
 
-- `main` — stable, production-ready code. Direct pushes are blocked.
-- `develop` — integration branch for features.
-- `feature/<short-description>` — individual feature branches.
-- `fix/<short-description>` — bug fix branches.
-- `claude/<session-id>` — branches used by AI assistants (this convention is enforced).
+- `main` — integration / production-track. No direct pushes.
+- `feature/<slug>` — feature branches.
+- `fix/<slug>` — bug fix branches.
+- `claude/<session-id>` — AI-assistant branches (this convention is real and
+  enforced by tooling — match it exactly).
 
-### Commit Messages
-
-Follow the [Conventional Commits](https://www.conventionalcommits.org/) format:
+### Commit messages — Conventional Commits
 
 ```
 <type>(<scope>): <short summary>
-
-[optional body]
-
-[optional footer]
 ```
 
-**Types:** `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `perf`
+Types in active use: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`,
+`ci`, `perf`. Recent history is a good reference.
 
-Examples:
-```
-feat(pipeline): add feature engineering step for user embeddings
-fix(serving): correct tensor dtype mismatch in inference handler
-test(models): add unit tests for GradientBoosting wrapper
-docs(readme): update setup instructions for Python 3.11
-```
+### Pull requests
 
-### Pull Requests
-
-- Every PR must have a description explaining **what** changed and **why**.
-- Link the PR to a GitHub Issue when applicable.
-- All CI checks must pass before merging.
-- Require at least one reviewer approval.
-- Squash merge into `develop`; merge commits into `main`.
+- Describe **what** changed and **why**.
+- All CI must pass. CI runs lint + build + migrations + unit tests against a
+  Postgres + Redis service container.
+- Do **not** open a PR unless the user explicitly asks for one.
 
 ---
 
-## CI/CD
+## CI / CD
 
-CI runs on every push and PR. The pipeline typically includes:
-
-1. **Lint** — `ruff` + `mypy`
-2. **Unit tests** — `pytest tests/unit/`
-3. **Integration tests** — `pytest tests/integration/` (may require secrets)
-4. **Build** — Docker image build
-5. **Deploy** — Automated deployment to staging on merge to `develop`; production on merge to `main`
-
-Secrets (API keys, credentials) are stored in GitHub Actions secrets — never in code or config files.
-
----
-
-## Environment Variables
-
-Copy `.env.example` to `.env` and fill in values. Never commit `.env`.
-
-| Variable                | Description                                   |
-|-------------------------|-----------------------------------------------|
-| `MLFLOW_TRACKING_URI`   | URI for the MLflow tracking server            |
-| `MODEL_REGISTRY_URI`    | URI for the model registry                    |
-| `DATA_BUCKET`           | Cloud storage bucket for datasets/artifacts   |
-| `DATABASE_URL`          | Connection string for the metadata database   |
-| `API_KEY`               | API key for the model serving endpoint        |
-
-> Add/remove rows as environment variables are defined.
+- `.github/workflows/ci.yml` — lint, build, run migrations against a real
+  Postgres, run vitest. Triggered on `main`, `develop`, and `claude/**`
+  branches plus all PRs.
+- `.github/workflows/deploy.yml` — builds the API image, pushes to ECR, runs
+  a one-shot ECS migrate task, updates the ECS service, syncs the web build
+  to S3, and invalidates CloudFront. Currently references placeholder values
+  (account `123456789012`, several `secrets.*` not yet set) — do not assume
+  it works end-to-end yet.
+- `.github/workflows/security.yml` — `pnpm audit --audit-level=critical` and
+  Trivy filesystem scan, weekly + on push/PR.
 
 ---
 
-## Dependency Management
+## Environment variables
 
-- Runtime dependencies: `requirements.txt` (pinned versions for reproducibility)
-- Dev dependencies: `requirements-dev.txt` (linters, test tools, notebooks)
-- When adding a new dependency:
-  1. Add it with a pinned version.
-  2. Run `pip-compile` (or equivalent) to regenerate lock files if used.
-  3. Document why the dependency is needed in the PR description.
+Source of truth: `.env.example`. Copy to `.env` for local dev and fill in.
+Never commit `.env`. Currently expected:
+
+| Variable                   | Purpose                                          |
+| -------------------------- | ------------------------------------------------ |
+| `NODE_ENV`, `PORT`, `CORS_ORIGINS` | Core API config                          |
+| `DATABASE_URL`, `REDIS_URL`        | Datastores                              |
+| `AWS_REGION`, `S3_INVOICES_BUCKET`, `S3_IMPORTS_BUCKET` | Object storage   |
+| `SQS_QBO_SYNC_URL`, `SQS_EMAIL_URL` | Async work queues                       |
+| `COGNITO_REGION`, `COGNITO_USER_POOL_ID`, `JWT_ISSUER`, `JWT_AUDIENCE` | Auth |
+| `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, `QBO_REDIRECT_URI`, `QBO_WEBHOOK_SECRET` | QuickBooks |
+| `SES_FROM`, `SES_FROM_ALLOWLIST`   | Outbound email                          |
+| `TWILIO_*`                         | SMS                                     |
+| `SENTRY_DSN`                       | Error tracking                          |
+| `NEXT_PUBLIC_API_URL`              | Frontend → API base URL                 |
 
 ---
 
 ## Security
 
-- Never commit secrets, credentials, API keys, or passwords.
-- Scan dependencies for vulnerabilities: `pip-audit` or `safety check`.
-- All external inputs (API requests, file uploads) must be validated before processing.
-- Follow least-privilege principles for cloud IAM roles.
+- Never commit secrets, credentials, or API keys.
+- Validate every external input at the API boundary (DTOs + zod / class-validator).
+- Tenant data is gated by Postgres RLS; treat any query that bypasses the
+  shared `Db` provider as a bug.
+- The dev login backdoor (`feat: dev-only login backdoor with HS256 JWT`) is
+  gated by `NODE_ENV !== 'production'`. Verify that gate before any prod
+  cutover.
+- Audit dependencies before merging additions.
 
 ---
 
-## Key Contacts & Resources
+## Notes for AI assistants
 
-| Resource                  | Location / Link                              |
-|---------------------------|----------------------------------------------|
-| Issue tracker             | GitHub Issues (this repo)                    |
-| CI/CD pipelines           | GitHub Actions (`.github/workflows/`)        |
-| MLflow UI                 | (add URL when deployed)                      |
-| Model registry            | (add URL when deployed)                      |
-| Internal documentation    | (add link to wiki/confluence/notion)         |
-
----
-
-## Notes for AI Assistants
-
-- **Always read files before editing them.** Do not assume file contents.
-- **Follow the branching convention.** AI-generated branches must use `claude/<session-id>` format.
-- **Do not hard-code credentials or secrets.**
-- **Keep changes minimal and focused.** Avoid refactoring unrelated code in the same PR.
-- **Run tests** (`pytest`) and **linting** (`ruff check . && mypy src/`) after making changes.
-- **Update this CLAUDE.md** whenever the project structure, tooling, or conventions change significantly.
-- When uncertain about project intent, read existing code, then ask rather than assume.
+- **Read first.** Always read files before editing. Do not assume contents.
+- **Follow the branching convention.** AI-assistant work uses
+  `claude/<session-id>`.
+- **Keep changes minimal and focused.** Do not refactor adjacent code in the
+  same change unless explicitly asked.
+- **Do not hard-code credentials.**
+- **Run `make lint` and `make test` after non-trivial changes.** CI will run
+  them anyway, but failing fast locally is faster.
+- **Do not create PRs unless explicitly asked.** Pushing to the working
+  branch is enough.
+- **Update this `CLAUDE.md`** when project structure, tooling, or
+  conventions change in a way another agent would need to know.
+- When uncertain about intent, read existing code, then ask rather than
+  assume.
 
 ---
 
-*Last updated: 2026-03-05 — Repository is in initial setup phase; update this file as the project is built out.*
+*Last updated: 2026-05-08 — Reflects state through `93dbea5` (Phase B: products
++ customers CRUD).*
